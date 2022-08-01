@@ -1,0 +1,724 @@
+<?xml version="1.0"?>
+<root>
+<targets_list>
+
+  <target
+    name="NXP_PHY01"
+	ip="192.168.57.108"
+    uid="root"
+    passw="sw_grp2"
+    info="NXP PHY02 target"
+    >
+    <prolog>
+    	<cmd>'killall python3'</cmd>
+     </prolog>
+    <epilog>
+        <cmd>'killall python3'</cmd>
+    	<cmd>'echo Test Finished'</cmd>
+    </epilog>
+  
+  </target>
+
+  <target
+    name="NXP_PHY02"
+	ip="192.168.57.137"
+    uid="root"
+    passw="sw_grp2"
+    info="NXP PHY02 target"
+    >
+    <prolog>
+    	<cmd>'killall python3'</cmd>
+     </prolog>
+    <epilog>
+        <cmd>'killall python3'</cmd>
+    	<cmd>'echo Test Finished'</cmd>
+    </epilog>
+  
+  </target>
+
+  <target
+    name="NXP_PHY03"
+	ip="192.168.62.241"
+    uid="root"
+    passw="sw_grp2"
+    info="NXP PHY03 target"
+    >
+    <prolog>
+    	<cmd>'killall python3'</cmd>
+     </prolog>
+    <epilog>
+        <cmd>'killall python3'</cmd>
+    	<cmd>'echo Test Finished'</cmd>
+    </epilog>
+  
+  </target>
+
+  <target
+    name="asil-vmswbuild12"
+	ip="192.168.57.132"
+    uid="ishoihet"
+    passw="1q2w3e4r5t"
+    info="IT target"    
+    >
+    <prolog>
+    	<cmd>'cd ' + obj.exec_path</cmd>
+    	<cmd>'pwd'</cmd>
+    	<cmd>'ls'</cmd>
+    	<cmd>'source setup_ru_x86.sh'</cmd>
+    </prolog>
+    <epilog>
+    	<cmd>'echo Test Finished'</cmd>
+    </epilog>
+  </target>
+  
+  <target
+    name="5Gsimulator"
+	 ip="192.168.57.132"
+    uid="root"
+    passw="1q2w3e4r5t"
+    info="IT target"    
+    >
+    <prolog>
+    </prolog>
+    <epilog>
+    	<cmd>'echo Test Finished'</cmd>
+    </epilog>
+  </target>
+  
+  <target
+    name="flexran1.server"
+	 ip="192.168.56.221"
+    uid="root"
+    passw="1"
+    info="IT target"    
+    >
+    <prolog>
+    </prolog>
+    <epilog>
+    	<cmd>'echo Test Finished'</cmd>
+    </epilog>
+  </target>
+    
+  <target
+    name="asil-vmswbuild12_root"
+	ip="asil-vmswbuild12"
+    uid="root"
+    passw="1q2w3e4r5t"
+    info="IT target"    
+    >
+    <prolog>
+    	<cmd>'cd ' + obj.exec_path</cmd>
+    	<cmd>'pwd'</cmd>
+    	<cmd>'ls'</cmd>
+    	<cmd>'source setup_ru_x86.sh'</cmd>
+    </prolog>
+    <epilog>
+    	<cmd>'echo Test Finished'</cmd>
+    </epilog>
+  </target>
+  
+ </targets_list>
+
+<actions_list>
+    <!-- Build RU --> 
+	<action  
+		func= "ru_build"
+		name= "ru_build"
+		rt_mode="_RU_OFFLINE_"
+		>
+	</action>
+	<!-- Build L1app --> 
+	<action  
+		func= "l1_build"
+		name= "l1_build"
+		>
+	</action>
+	<!-- Pack L1app --> 
+	<action  
+		func= "l1_build_pack"
+		name= "l1_build_pack"
+		>
+	</action>
+	<!--L1_Release --> 
+	<action  
+		func= "l1_HIPHY_rel"
+		name= "l1_HIPHY_rel"
+		>
+	</action>
+	<!-- Build EMSIM --> 
+	<action  
+		func= "emsim_build"
+		name= "emsim_build"
+		>
+	</action>
+	<!-- Deploy L1 PHY -->
+	<action
+		func= "l1_phy_deploy"
+		name= "l1_phy_deploy"
+		>
+	</action>
+	<!-- Deploy emsim BIN -->
+	<action
+		func= "emsim_bin_deploy"
+		name= "emsim_bin_deploy"
+		>
+	</action>
+	<!-- Deploy RU PHY -->
+	<action
+		func= "ru_phy_deploy"
+		name= "ru_phy_deploy"
+		>
+	</action>
+	<action
+		func= "run_target_prepare"
+		name= "run_target_prepare"
+		>
+	</action>
+	<action
+		func= "run_testmac_macsim"
+		name= "run_testmac_macsim"
+		>
+	</action>
+	<action
+		func= "git_local_rep"
+		name= "git_local_rep"
+		>
+	</action>
+	
+	<action
+		func= "git_remote_rep"
+		name= "git_remote_rep"
+		>
+	</action>
+	
+	<action
+		func= "test_report_build"
+		name= "test_report_build"
+		>
+	</action>
+	
+	<!-- Unit test for multy-thread, time event driver and debug tools-->
+	<action
+		func= "exec_cmdlist"
+		name= "ru_rt_cntr_test"
+		>
+		<cmd record_name='Yes' >'RT_timer_debugger_tst' + obj.ant_mode + ' ' + obj.architecture+ ' '+ obj.rt_mode+ ' ' + obj.mode</cmd>
+		<cmd chk= "True">'cd ' + obj.exec_path+'/bin'</cmd>
+    	<cmd>'pwd'</cmd>
+		<cmd
+			pass="RT_CNTR test passed"
+			>'python3 ../Tests/COMMON/RT_CNTR_TEST/test.py'</cmd>
+		<cmd
+			pass="POST_MORTEM data extract test passed"
+			>'python3 ../Tests/COMMON/RT_CNTR_TEST/test_trace_extract.py'</cmd>		
+	</action>
+	<action
+		func= "ru_glue_logic_test"
+		name= "ru_glue_logic"
+		target= "asil-vmswbuild12_root"
+		>
+	</action>
+	<action
+		func= "testmac_task"
+		name= "testmac_task"
+		>
+	</action>
+	<action
+		func= "macsim_task"
+		name= "macsim_task"
+		>
+	</action>
+		
+	<!-- Action to mount the board-->
+	<action
+	name="board_mount"  
+	func= "exec_cmdlist"
+    target= "NXP_PHY02"
+    host= "asil-vmswbuild12_root"
+    host_path="/mnt/80GB/workarea/PHY_EXEC"
+    exec_path="/root/mount_tst"       	
+	>
+        	<cmd>'umount '+ obj.exec_path</cmd>
+        	<cmd>'mkdir -p '+ obj.exec_path</cmd>
+        	<cmd>'mount -t nfs ' + obj.exec_host.ip+':'+obj.host_path+' '+ obj.exec_path</cmd>
+        	<cmd chk="True">'cd '+obj.exec_path</cmd>
+	</action>
+	<action  
+	name="ru_phy_bin_deploy"
+	func= "exec_cmdlist"
+	exec_path="/mnt/80GB/workarea/PHY_EXEC"
+	target="asil-vmswbuild12_root"
+	>
+	<cmd chk= "True">'cd ' + obj.exec_path</cmd>
+	<cmd>'rm -f bin/*'</cmd>
+	<cmd chk= "True">'tar -xf ru_phy_' + obj.architecture + '_'+ obj.mode + '_' + obj.ant_mode+ '_'+ obj.rt_mode+ '.tgz'</cmd> 
+	<cmd chk= "True">'cd bin'</cmd>
+	</action>
+	<action
+        	name= "ru_phy_test_prepare"
+      	tests_path="/at/p/Development/PHY_Builds/5G_RU_ORAN_TestVectors/RU_005"
+       	func="ru_phy_test_prepare"
+        >
+    </action>
+    
+    <action  
+    	name="git_update"
+    	func= "exec_cmdlist"
+    	exec_path="/mnt/80GB/workarea/PHY_EXEC"
+    	target="asil-vmswbuild12_root"
+    	>
+    	<cmd chk= "True">'cd ' + obj.exec_path</cmd>
+    	<cmd>'git pull'</cmd>
+    </action>
+	
+</actions_list>
+
+<sessions_list>
+    <!-- Get latest version from GIT -->
+    <session
+        name='GET_LATEST_VERSION'
+        target = "asil-vmswbuild12"
+        exec_path="/mnt/80GB/workarea/git/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+        >
+        <action>git_update</action>
+    </session>
+    
+    <!-- Build one binary -->
+	<session
+		name="RU_BUILD_TEST_MODE"
+		architecture="INTEL"
+		mode="release"
+		target = "asil-vmswbuild12"
+		ant_mode="_2x2_"
+		exec_path="/mnt/80GB/workarea/git/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+		>
+		<action>ru_build</action>			
+    </session>
+    
+    <!-- Build one binary -->
+	<session
+		name="L1APP_BUILD"
+		target = "5Gsimulator"
+		exec_path="/home/build/git/PHY5G_Rel/FlexRanPHY/FlexRan"	
+		exec_path_emsim="/mnt/80GB/workarea/vbala/DU"
+		exec_path_phy5g="/home/build/git/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+		timeout= "4800"
+		>
+		<action>l1_build</action>			
+    </session>
+    
+    <!-- L1_Release -->
+	<session
+		name="L1_RELEASE"
+		target = "asil-vmswbuild12_root"
+		exec_path="/mnt/80GB/workarea/vbala/PHY5G_Rel/FlexRanPHY/FlexRan"	
+		exec_path_emsim="/mnt/80GB/workarea/vbala/DU"
+		exec_path_phy5g="/mnt/80GB/workarea/vbala/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+		exec_path_artifacts_dir="/p/Development/Internal/Builds/5G/HPHY/Artifacts"
+		exec_path_release_file="/at/p/Development/Internal/Builds/5G/HPHY/HPHY_RELEASES/HPHY.0.0.0"
+		timeout= "4800"
+		>
+		<action>l1_HIPHY_rel</action>			
+    </session>
+    
+    <!-- Pack L1 build -->
+	<session
+		name="L1APP_BUILD_PACK"
+		target = "5Gsimulator"
+		exec_path="/home/build/git/PHY5G_Rel/FlexRanPHY/FlexRan"	
+		timeout= "4800"
+		>
+		<action>l1_build_pack</action>			
+    </session>
+    
+    <session
+		name="EMSIM_BUILD"
+		target = "5Gsimulator"
+		exec_path_emsim="/mnt/80GB/workarea/vbala/DU"
+		exec_path = "/home/vbala/PHY5G_Rel/FlexRanPHY/FlexRan"
+		exec_path_phy5g="/home/vbala/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+		>
+		<action>emsim_build</action>			
+    </session>
+    
+     <!-- Build all binaries for x86 -->
+    <session
+        name="RU_BUILD_ALL_RELEASE_INTEL"
+        timeout= "1200"
+        >
+        <session>RU_BUILD_TEST_MODE</session>
+        <session ant_mode= "_4x4_">RU_BUILD_TEST_MODE</session>
+        <session ant_mode= "_8x32_">RU_BUILD_TEST_MODE</session>
+    </session>
+    <!-- Build releases for ARM -->
+    <session
+        name="RU_BUILD_ALL_RELEASE_ARM"
+        architecture="ARM"
+        timeout= "1200">
+        <session>RU_BUILD_ALL_RELEASE_INTEL</session>
+    </session>
+    
+    <!-- Build all ru binaries -->
+    <session
+        timeout= "2400"
+        name= "RU_BUILD_ALL">
+        <session>RU_BUILD_ALL_RELEASE_ARM</session>
+        <session>RU_BUILD_ALL_RELEASE_INTEL</session>
+    </session>
+    <!-- Package the tests -->
+    <session
+        name="RU_TEST_PREPARE"
+        target = "asil-vmswbuild12"
+        timeout= "1200"
+        exec_path="/mnt/80GB/workarea/git/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+        >
+        <action>ru_phy_test_prepare</action>	
+     </session>   
+     
+
+    <!-- Preparing RU release -->
+   <session
+        timeout= "3600"
+        name= "RU_RELEASE_BUILD_AND_TEST_PREPARE"
+        exec_path="/mnt/80GB/workarea/git/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+        target = "asil-vmswbuild12">        
+        <session>RU_BUILD_ALL</session>
+        <session>RU_TEST_PREPARE</session>
+    </session>
+ 
+ 
+ 
+     <!-- Deploy the ru release -->
+     <session
+        name="RU_PHY_RELEASE_DEPLOY"
+        host = "asil-vmswbuild12_root"
+        host_path="/mnt/80GB/workarea/PHY_EXEC"
+        timeout= "1200"
+        host_switch= "True"
+        >
+        <action>ru_phy_deploy</action>	
+     </session>   
+     
+     <!-- Deploy the L1APP BIN -->
+     <session
+        name="L1APP_PHY_BIN_DEPLOY"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+        timeout= "14400"
+        host_switch= "True"
+        >
+        <action>l1_phy_deploy</action>	
+     </session> 
+     
+     <!-- Deploy the ru release -->
+     <session
+        name="EMSIM_BIN_DEPLOY"
+        host = "flexran1.server"
+        host_path="/home/vbala/temp_emsim"
+        timeout= "1200"
+        host_switch= "True"
+        >
+        <action>emsim_bin_deploy</action>	
+     </session>    
+     
+     <!-- RUN_TESTMAC -->
+     <session
+        name="RUN_TESTMAC"
+        timeout= "14400"
+        host_switch= "True"
+        thread_name = "TESTMAC_THREAD"
+        test_case = "test_case_asfh.txt"
+        >
+        <session>RUN_TARGET_PREPARE</session>
+		   <session>TARGET_RUN</session>	
+		   <session>TEST_REPORT</session>
+		 </session> 
+		 
+		 <!-- RUN_TESTMAC_ASFH -->
+     <session
+        name="RUN_TESTMAC_ASFH"
+        timeout= "14400"
+        host_switch= "True"
+        thread_name = "TESTMAC_ASFH_THREAD"
+        test_case = "test_case_asfh.txt"
+        >
+        <session>RUN_TARGET_PREPARE</session>
+		   <session>TARGET_RUN_ASFH</session>	
+		   <session>TEST_REPORT</session>
+		 </session> 
+		 
+		 <!-- Run testmac_thread -->
+     <session
+        name="TESTMAC_ASFH_THREAD"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+        test_mode = "ASFH"
+        phy_start = "phystart 0 1 10000"
+        timeout= "14400"
+        host_switch= "True"
+        >
+        <action>testmac_task</action>
+    </session>  
+    
+    <!-- RUN_TESTMAC_ASFH -->
+     <session
+        name="RUN_TESTMAC_XRAN"
+        timeout= "14400"
+        host_switch= "True"
+        thread_name = "TESTMAC_XRAN_THREAD"
+        test_case = "test_case_xran.txt"
+        >
+        <session>RUN_TARGET_PREPARE</session>
+		   <session>TARGET_RUN_XRAN</session>	
+		   <session>TEST_REPORT</session>
+		 </session> 
+		 
+		 <!-- Run testmac_thread -->
+     <session
+        name="TESTMAC_XRAN_THREAD"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+        test_mode = "XRAN"
+        phy_start = "phystart 0 1 10000"
+        timeout= "14400"
+        host_switch= "True"
+        >
+        <action>testmac_task</action>
+    </session>    
+     
+     <!-- RUN_MACSIM -->
+     <session
+        name="RUN_MACSIM"
+        timeout= "1200"
+        host_switch= "True"
+        host_path_emsim="/home/vbala/temp_emsim"
+        thread_name = "MACSIM_THREAD"
+        test_case = "test_case_emsim.txt"
+        >
+        <session>RUN_TARGET_PREPARE</session>
+		   <session>TARGET_RUN</session>
+		   <session>TEST_REPORT</session>
+		 </session> 
+     
+     <!-- RUN_TARGET_PREPARE -->
+     <session
+        name="RUN_TARGET_PREPARE"
+        target = "5Gsimulator"
+        exec_path_git_repo="/home/vbala/PHY5G_Rel/"
+        >
+        <action>run_target_prepare</action>	
+     </session> 
+     
+     <!-- TARGET_RUN -->
+     <session
+        name="TARGET_RUN"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+        timeout= "1200"
+        host_switch= "True"
+        >
+        <action>run_testmac_macsim</action>	
+     </session> 
+     
+     <!-- TARGET_RUN -->
+     <session
+        name="TARGET_RUN_ASFH"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+        timeout= "1200"
+        host_switch= "True"
+        thread_name = "TESTMAC_ASFH_THREAD"
+        >
+        <action>run_testmac_macsim</action>	
+     </session> 
+     
+     <!-- TARGET_RUN -->
+     <session
+        name="TARGET_RUN_XRAN"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+        timeout= "1200"
+        host_switch= "True"
+        thread_name = "TESTMAC_XRAN_THREAD"
+        >
+        <action>run_testmac_macsim</action>	
+     </session> 
+              
+     <!-- Run testmac_thread -->
+     <session
+        name="TESTMAC_THREAD"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+        test_mode = "TIMER"
+        timeout= "14400"
+        host_switch= "True"
+        >
+        <action>testmac_task</action>
+    </session>   
+     
+     <!-- Run macsim_thread -->
+     <session
+        name="MACSIM_THREAD"
+        host = "flexran1.server"
+        test_mode = "TIMER"
+        host_path="/home/vbala/"
+        host_path_emsim="/home/vbala/temp_emsim"
+        host_switch= "True"
+        >
+        <action>macsim_task</action>	
+    </session>   
+     
+     <!-- git local repo  -->
+     <session
+        name="GIT_LOCAL_REPO"
+        target = "5Gsimulator"
+		   exec_path_git_repo="/home/vbala/PHY5G_Rel/"
+		   exec_path = "/home/vbala/PHY5G_Rel/FlexRanPHY/FlexRan"
+        host_switch= "True"
+        file_nameb = "bala"
+        >
+        <action>git_local_rep</action>	
+     </session> 
+     
+     <!-- git remote repo  -->
+     <session
+        name="GIT_REMOTE_REPO"
+        host = "flexran1.server"
+		   host_path_git_repo="/mnt/data/vbala/git_repo_test"
+		   host_path="/mnt/data/vbala/temp"
+		   timeout= "9600"
+        host_switch= "True"
+        >
+        <action>git_remote_rep</action>	
+     </session>    
+     
+     <!-- Test report for testmac or macsim  -->
+     <session
+        name="TEST_REPORT"
+        host = "flexran1.server"
+        host_path="/home/vbala"
+		   timeout= "9600"
+        host_switch= "True"
+        >
+        <action>test_report_build</action>	
+     </session>    
+       
+     <session
+		name="RU_TEST_RUN"
+		architecture="INTEL"
+		mode="release"
+		target = "asil-vmswbuild12_root"
+		exec_path="/mnt/80GB/workarea/PHY_EXEC"	
+		ant_mode= "_4x4_"
+		>
+		<session>RU_PHY_BIN_DEPLOY</session>
+		<action>ru_glue_logic</action>
+     </session>
+     <session
+         name = "RUN_x86_GL_TESTS"
+         host_switch= "False"
+         architecture="INTEL"
+ 		 target = "asil-vmswbuild12_root"
+		 exec_path="/mnt/80GB/workarea/PHY_EXEC"        
+         >
+         <session ant_mode= "_4x4_">RU_TEST_RUN</session>
+         <session ant_mode= "_8x32_">RU_TEST_RUN</session>
+         <session ant_mode= "_2x2_">RU_TEST_RUN</session>
+    </session>
+     <session
+        name= "RU_RT_CNTR_TEST"
+        target= "asil-vmswbuild12_root"
+        exec_path="/mnt/80GB/workarea/PHY_EXEC"
+        >
+        	<session>RU_PHY_BIN_DEPLOY</session>
+        <action>ru_rt_cntr_test</action>
+    </session> 
+    <session
+        name="RU_PHY_RELEASE_TEST_VM"
+        exec_path="/mnt/80GB/workarea/PHY_EXEC"
+        target= "asil-vmswbuild12_root"
+        architecture="INTEL"
+        host_switch= "False"
+        >
+        <session>RU_PHY_RELEASE_DEPLOY</session>
+        <session>RUN_x86_GL_TESTS</session>
+        <session>RU_RT_CNTR_TEST</session>
+    </session>       
+<!--	<session
+		name="NXP_RU_MODE_TEST"
+		target= "NXP_PHY02"
+		>
+		<action>ru_build</action>
+		<action>ru_phy_test_prepare</action>
+		<action>ru_phy_deploy</action>
+		<action>ru_glue_logic</action>
+	</session>
+	
+	<session
+		name="RU_x86_TEST"
+		target = "asil-vmswbuild12"
+		architecture="INTEL" 
+		mode="release"
+		exec_path="/mnt/80GB/workarea/git/PHY5G_Rel/PHY5G/Prototype/NR_5G_SIM"
+		>
+		<session>RU_MODE_TEST</session>
+	</session>
+	-->
+	<session
+    	    name = "RU_PHY_BIN_DEPLOY"
+    		mode="release"
+		ant_mode="_4x4_"
+		architecture="ARM"
+		target="NXP_PHY02"
+		host= "asil-vmswbuild12_root"
+		host_path="/mnt/80GB/workarea/PHY_EXEC"
+		host_switch= "True"
+    	    >
+        	<action>ru_phy_bin_deploy</action>
+    </session>
+    <session  
+        name="BOARD_MOUNT_PHY02"
+		host= "asil-vmswbuild12_root"
+		target = "NXP_PHY02"
+        >  
+        <action 
+        		exec_path="/root/mount_tst">board_mount</action>  
+              
+   	</session>    
+	<session
+		name="RU_NXP_TEST_PHY02"
+		target = "NXP_PHY02"
+		host = "asil-vmswbuild12_root"
+		host_path="/mnt/80GB/workarea/PHY02_EXEC"
+		exec_path="/root/mount_tst"
+		architecture="ARM"
+		timeout= "300"
+		>
+		
+		<session	>RU_PHY_RELEASE_DEPLOY</session>
+		<session>BOARD_MOUNT_PHY02</session>
+		
+		<session ant_mode= "_4x4_">RU_TEST_RUN</session>
+		<session ant_mode= "_8x32_">RU_TEST_RUN</session>
+		<session ant_mode= "_2x2_">RU_TEST_RUN</session>
+		<session>RU_RT_CNTR_TEST</session>
+	</session>
+	
+	<session
+	  target = "NXP_PHY01"
+	  name="RU_NXP_TEST_PHY01"
+	  host_path="/mnt/80GB/workarea/PHY01_EXEC"
+	  >
+	  <session>RU_NXP_TEST_PHY02</session>
+    </session>
+    
+    <session
+	  target = "NXP_PHY03"
+	  name="RU_NXP_TEST_PHY03"
+	  host_path="/mnt/80GB/workarea/PHY03_EXEC"
+	  >
+	  <session>RU_NXP_TEST_PHY02</session>
+    </session>
+	
+</sessions_list>
+</root>
