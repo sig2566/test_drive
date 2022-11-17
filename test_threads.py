@@ -241,9 +241,6 @@ class MainHandler:
             if self.target!= '':
                 self.exec_host= self.targets_dict[self.target]
             self.exec_path = self.host_path
-            self.exec_path_emsim = self.host_path_emsim
-            self.exec_path_phy5g = self.host_path_phy5g
-            self.exec_path_git_repo = self.host_path_git_repo
         self.exec_target.open_connect(self)
         return
          
@@ -715,28 +712,8 @@ class XML_handler:
         global sess_ctr,sess_name
         for session_name in session_name_list:
             print('Processing test:'+session_name)
-            if session_name=='RUN_TESTMAC_ASFH':
-                sess_name=session_name
-                sess_ctr +=1
-            elif session_name=='RUN_TESTMAC_XRAN':
-                sess_name=session_name
-                sess_ctr +=1
             self.SessionProcess(session_name,main_handler, attrib_dict)   
 
-    def CheckAttribVal(self, key, val):
-        ant_mode = ['_2x2_', '_4x4_', '_8x32_']
-        mode = ['debug', 'release']
-        architecture= ['INTEL', 'ARM']
-        if key=='mode' and val not in mode:
-            print('Config Error: compilation mode is '+ val)
-            raise
-        if key=='ant_mode' and val not in ant_mode:
-            print('Config Error: MIMO mode is '+ val)
-            raise
-        if key=='architecture' and val not in architecture:
-            print('Config Error: architecture is '+ val)
-            raise
-        
     def  ActionProcess(self,child, main_handler_orig, child_attrib_dict_tmp):
         global result_file,test_report_action
         print('Action name=', child.text)
@@ -751,7 +728,7 @@ class XML_handler:
             #Check if the attribute is existed in the main_handler
             if attrib not in main_handler.__dict__:
                 print('Warning: unused attribute: '+attrib)
-            self.CheckAttribVal(attrib, action.get(attrib))
+                
             main_handler.__dict__[attrib] = action.get(attrib)
         #Overwrite Action element attributes if necessary.
         for attrib in child_attrib_dict_tmp.keys():
@@ -759,7 +736,6 @@ class XML_handler:
             if attrib not in main_handler.__dict__:
                 print('Warning: unused attribute: '+attrib)
            
-            self.CheckAttribVal(attrib, child_attrib_dict_tmp[attrib])
             main_handler.__dict__[attrib] = child_attrib_dict_tmp[attrib]
         
         try:
