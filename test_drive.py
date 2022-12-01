@@ -10,6 +10,10 @@
 # python3  ../Tests/DU/GLUE_LOGIC_TEST/test.py --tst ../Tests/DU/GLUE_LOGIC_TEST/Test_Vec/Test2 test2_2
 import os
 import sys
+from gevent.libev.corecext import child
+from nose.plugins import attrib
+from conda.common._logic import FALSE
+from Cython.Compiler.Naming import self_cname
 print(sys.version)
 import time
 import re
@@ -50,9 +54,15 @@ class TimeoutError(Exception):
     pass
 
 def handler(signum, frame):
-    print("Forever is over!")
+    print_log("Forever is over!")
     raise TimeoutError()
-    
+
+def print_log(log_str=""):
+    thread_id= threading.get_ident()
+    timestamp= str(time.time())
+    out_str= timestamp + "\t" + str(thread_id)+"\t" + log_str  
+    print(out_str)
+      
 TestPassed= True
 def check_result(test_res, success_pattern= '[Tt]ests [Pp]assed'):
     global TestPassed
@@ -106,7 +116,7 @@ class ExecTarget:
     def get_scp(self, src_file, downloadLocation, recursive=True):
     
         # Where are we putting this?  Make the folder if it doesn't already exist
-        print('scp_get -r ' + src_file + ' ' + downloadLocation + ' recursive='+str(recursive))
+        print_log('scp_get -r ' + src_file + ' ' + downloadLocation + ' recursive='+str(recursive))
         if not os.path.exists(downloadLocation):
             try:
                 os.makedirs(downloadLocation)
@@ -119,21 +129,21 @@ class ExecTarget:
             scp.close()
             return True
         except scp.SCPException as e:
-            print("download error: " + str(e))
+            print_log("download error: " + str(e))
             return False 
 
     def put_scp(self, src_file, dest, recursive=True):
-        print('scp_put -r ' + src_file + ' ' + dest + ' recursive='+str(recursive))
+        print_log('scp_put -r ' + src_file + ' ' + dest + ' recursive='+str(recursive))
         scp = SCPClient(self.ssh_client.get_transport())
         for f_name in os.listdir(src_file):
             file_path = src_file+'/'+f_name
             dest_path_file= dest+'/'+f_name
-            print('copy '+file_path +' to '+ dest_path_file)
+            print_log('copy '+file_path +' to '+ dest_path_file)
             try:
                 scp.put(file_path, dest_path_file, recursive)
                 
             except scp.SCPException as e:
-                print("upload error: " + str(e))
+                print_log("upload error: " + str(e))
                 scp.close()
                 return False
         scp.close()
@@ -146,7 +156,7 @@ class ExecTarget:
             return
         
         cmd_str= eval(xml_cmd.text)
-        print("cmd_str="+cmd_str)
+        print_log("cmd_str="+cmd_str)
         err_check= False
         pass_pattern = None
         if 'chk' in xml_cmd.keys():
@@ -158,7 +168,7 @@ class ExecTarget:
         
     def run_cmd(self, cmd, check_error=False, pass_pattern= None):
         CurrTestPassed = True
-        print(cmd)
+        print_log(cmd)
         if self.timeout_err == True:
             return
         cmd = cmd.strip('\n')
@@ -184,7 +194,7 @@ class ExecTarget:
                 line = line.strip('\n')
                 line = line.strip('\r')
                 if p_cmd.search(line):
-                    #print(line)
+                    #print_log(line)
                     # up for now filled with shell junk from stdin
                     shout = []
                 elif p_echo.search(line):
@@ -200,10 +210,10 @@ class ExecTarget:
                     break
                 else:
                     # get rid of 'coloring and formatting' special characters
-                    print(line)
+                    print_log(line)
                     shout.append(line)
         except TimeoutError  as exc: 
-                print(exc)
+                print_log(exc)
                 self.stdin.write('\x03')
                 self.stdin.flush()
                 # stderr is combined with stdout.
@@ -227,9 +237,9 @@ class ExecTarget:
 
         
         if len(sherr)!= 0:
-            print('Error:')
+            print_log('Error:')
             for err_str in sherr:
-                print(err_str)
+                print_log(err_str)
             if check_error==True:
                 raise Exception(sherr)
          
@@ -252,17 +262,17 @@ class ExecTarget:
         self.timeout_err = False
         try:
             self.ssh_client.connect(self.ip, port=self.port, username=self.uid, password=self.passw, timeout= float(main_handler.timeout))
-            print( "Connected successfully. ip =" + self.ip + " user =" + self.uid+" Password = " + self.passw)
+            print_log( "Connected successfully. ip =" + self.ip + " user =" + self.uid+" Password = " + self.passw)
             ip_addr = self.ip;
             user_id = self.uid;
             
             
         #except paramiko.AuthenticationException, error:
         except:
-            print ("Incorrect password: "+self.passw)
+            print_log ("Incorrect password: "+self.passw)
             raise
         # except socket.error, error:
-        #     print(error)
+        #     print_log(error)
         #    raise
         channel = self.ssh_client.invoke_shell()
         self.stdin = channel.makefile('wb')
@@ -271,7 +281,7 @@ class ExecTarget:
         self.is_connected = True
         for cmd in self.prolog:
             res = self.XMLcmd2cmd(cmd)
-            #print('\n'.join(res))
+            #print_log('\n'.join(res))
         
 
         return 
@@ -311,7 +321,6 @@ class MainHandler:
         self.tests_path = ''
         self.rel_dir = '/tmp/release'
         self.test_case = '.'
-        self.iterations=10
         #Add access to environment variables
         self.exec_target.add_parent_class_callback(self)
        
@@ -323,23 +332,23 @@ class MainHandler:
         rem_chars = ["'", "[]"]
         cmd= 'cd '+self.exec_path_git_repo
         self.exec_target.run_cmd(cmd)
-        print("git_clone_rep")
+        print_log("git_clone_rep")
         git_clone_rep  = self.exec_target.run_cmd('git config --get remote.origin.url')
         git_clone_rep = ''.join(i for i in git_clone_rep if not i in rem_chars)
-        print("git_loc_branch")
+        print_log("git_loc_branch")
         git_loc_branch = self.exec_target.run_cmd('git symbolic-ref --short HEAD')
         git_loc_branch = ''.join(i for i in git_loc_branch if not i in rem_chars)
         cmd= 'cd '+self.exec_path
         self.exec_target.run_cmd(cmd)
         git_loc_branch_flex = self.exec_target.run_cmd('git symbolic-ref --short HEAD')
         git_loc_branch_flex = ''.join(i for i in git_loc_branch_flex if not i in rem_chars)
-        print(git_loc_branch_flex)
-        print("git_commit_id")
+        print_log(git_loc_branch_flex)
+        print_log("git_commit_id")
         git_commit_id  = self.exec_target.run_cmd('git rev-parse HEAD')
         git_commit_id = ''.join(i for i in git_commit_id if not i in rem_chars)
         datetime_object = datetime.now()
         x_str = datetime_object
-        print(x_str)
+        print_log(x_str)
         text_file = open("branch_details.txt", "wt")
         branch_details = ' ******************************* ' + '\n  NIGHTLY BUILD TEST REPORT  '+'\n ******************************* '+'\nTest_ID             '+'               :' +'Nightly_' +str(x_str) +'\nFlexran branch' +'               :' + git_loc_branch_flex + '  \n' + 'Commit id'+'                       :' + git_commit_id + ' \n'
         text_file.write(branch_details)
@@ -351,7 +360,7 @@ class MainHandler:
 
         
     def CommonSetup(self):
-        print("self.host_switch="+self.host_switch)
+        print_log("self.host_switch="+self.host_switch)
         if self.host_switch== 'False' or self.host == '':
             self.exec_target  = self.targets_dict[self.target]
             if self.host != '':
@@ -375,9 +384,9 @@ class MainHandler:
         stdout=subprocess.PIPE,
         encoding='utf8'
         )
-        print(cmd)
+        print_log(cmd)
         stdout = process.communicate()[0]
-        print('{}'.format(stdout))
+        print_log('{}'.format(stdout))
         return
         
     def start_rd_wr(self,cmd):
@@ -412,7 +421,7 @@ class MainHandler:
             os.environ[VarName]=VarValue
             
     def my_callback(self,filename, bytes_so_far, bytes_total):
-        print("Transfer of %r is at %d/%d bytes (%.1f%%)" % (filename, bytes_so_far, bytes_total, 100. * bytes_so_far / bytes_total))
+        print_log("Transfer of %r is at %d/%d bytes (%.1f%%)" % (filename, bytes_so_far, bytes_total, 100. * bytes_so_far / bytes_total))
        
         
                 
@@ -438,7 +447,7 @@ class MainHandler:
             response = os.system("ping -c 1 " + self.exec_target.ip)
             # and then check the response...        
             if response == 0:
-                print("Server alive")
+                print_log("Server alive")
                 pingstatus = True
                 break
             
@@ -447,7 +456,7 @@ class MainHandler:
         return pingstatus
         
     def reboot_test(self):
-        print("Test the server reboot")
+        print_log("Test the server reboot")
         self.CommonSetup()
         self.exec_target.run_cmd('reboot &')
 
@@ -455,14 +464,38 @@ class MainHandler:
             
         
     def  exec_cmdlist(self):
-        print("Run commands by list")
+        print_log("Run commands by list")
         self.CommonSetup()
         for cmd in self.cmd_list:
             self.exec_target.XMLcmd2cmd(cmd)
         self.exec_target.close_connection()
         return True   
         
+
+#Thread wrapper
+class ThreadWrapper(Thread):
+    def __init__(self, child, test_handler, attrib, xml_handler):
+        threading.Thread.__init__(self)
+        self.child= child
+        self.test_handler= test_handler
+        self.attrib= attrib
+        self.xml_handler= xml_handler
+        self.result= FALSE
         
+    def run(self):
+        print_log("Start new thread")
+        if self.child.tag == 'thread_session':            
+            self.result= self.xml_handler.ActionProcess(self.xml_handler, self.child, self.test_handler, self.attrib)
+        elif self.child.tag == 'thread_session':
+            self.result= self.xml_handler.SessionProcess(self.xml_handler, self.child.text, self.test_handler, self.attrib)
+        else:
+            print_log("Error: Wromg tag self.child.tag")
+            return False
+        
+    def join(self):
+        Thread.join(self)
+        return self.result
+                
 #Defines general parser class
 class XML_handler:
     def __init__(self, test_handler):
@@ -474,6 +507,8 @@ class XML_handler:
         self.root = []
         self.test_handler = test_handler
         self.session_dict = {}
+        self.iterations=1
+        self.threads= []
         
     def Init(self, file_name):
         self.file_name = file_name
@@ -486,29 +521,29 @@ class XML_handler:
             return
         for target in targets_list.iter('target'):
             if target.get('name') in self.test_handler.targets_dict.keys():
-                print('Error: Target '+ target.get('name') + ' is allocated already')
+                print_log('Error: Target '+ target.get('name') + ' is allocated already')
                 raise
             exec_target=  copy.deepcopy(self.test_handler.exec_target)
             for var_name  in target.keys():
                 if var_name in exec_target.__dict__.keys():
                     exec_target.__dict__[var_name] = target.get(var_name)
                 else:
-                    print('Warning: Var name '+ var_name + ' is not existed in tatget exec object')
+                    print_log('Warning: Var name '+ var_name + ' is not existed in tatget exec object')
             for child in target:
                 if child.tag == 'prolog':
                     for cmd in child:
                         if cmd.tag != 'cmd':
-                            print('Wrong element in target start prolog: '+ child.tag)
+                            print_log('Wrong element in target start prolog: '+ child.tag)
                             raise
                         exec_target.prolog.append(cmd)
                 elif child.tag == 'epilog':
                     for cmd in child:
                         if cmd.tag != 'cmd':
-                            print('Wrong element in target start prolog: '+ child.tag)
+                            print_log('Wrong element in target start prolog: '+ child.tag)
                             raise
                         exec_target.epilog.append(cmd)    
                 else:
-                    print('Wrong not cmd element name:'+ cmd.tag)
+                    print_log('Wrong not cmd element name:'+ cmd.tag)
             #check IP address or convert the server name to IP
             # exec_target.ip= socket.gethostbyname(exec_target.ip)
             #exec_target.ip = socket.gethostbyname(exec_target.name)
@@ -523,7 +558,7 @@ class XML_handler:
             return
         for action in actions_dict.iter('action'):
             if action.get('name') in actions_dict.keys():
-                print('Error: Action '+ action.get('name')+ ' is existed already')
+                print_log('Error: Action '+ action.get('name')+ ' is existed already')
                 raise
             self.actions_dict[action.get('name')] = action
      
@@ -534,47 +569,53 @@ class XML_handler:
         for session in session_list.findall('session'):
             session_name= session.get('name')
             if session_name in self.session_dict.keys():
-                print('Error: Session ' + session_name + ' already allocated' )
+                print_log('Error: Session ' + session_name + ' already allocated' )
                 raise
+            print_log("session name " + session_name)
             self.session_dict[session_name] = session
                 
     def SessionProcessList(self, session_name_list, main_handler, attrib_dict):
         for session_name in session_name_list:
-            print('Processing test:'+session_name)
+            print_log('Processing test:'+session_name)
             self.SessionProcess(session_name,main_handler, attrib_dict)   
 
     def CheckAttribVal(self, key, val):
         mode = ['debug', 'release']
         architecture= ['INTEL', 'ARM']
         if key=='mode' and val not in mode:
-            print('Config Error: compilation mode is '+ val)
+            print_log('Config Error: compilation mode is '+ val)
             raise
 
         if key=='architecture' and val not in architecture:
-            print('Config Error: architecture is '+ val)
+            print_log('Config Error: architecture is '+ val)
             raise
+        #Do not forward the iteration attribute recursively.
+        if key == 'iteration':
+            return False
+        return True
+        
         
     def  ActionProcess(self,child, main_handler_orig, child_attrib_dict_tmp):
         global test_report_action
-        print('Action name=', child.text)
+        print_log('Action name='+ child.text)
         action= self.actions_dict[child.text]
         main_handler=  copy.deepcopy(main_handler_orig )
         test_report_action = child.text
         CurrTestPassed = True
         if action == None:
-            print('Action: '+ child.text + ' did not found in actions list')
+            print_log('Action: '+ child.text + ' did not found in actions list')
             raise
         for attrib in action.keys():
             #Check if the attribute is existed in the main_handler
             if attrib not in main_handler.__dict__:
-                print('Warning: unused attribute: '+attrib)
+                print_log('Warning: unused attribute: '+attrib)
             self.CheckAttribVal(attrib, action.get(attrib))
             main_handler.__dict__[attrib] = action.get(attrib)
         #Overwrite Action element attributes if necessary.
         for attrib in child_attrib_dict_tmp.keys():
             #Check if the attribute is existed in the main_handler
             if attrib not in main_handler.__dict__:
-                print('Warning: unused attribute: '+attrib)
+                print_log('Warning: unused attribute: '+attrib)
            
             self.CheckAttribVal(attrib, child_attrib_dict_tmp[attrib])
             main_handler.__dict__[attrib] = child_attrib_dict_tmp[attrib]
@@ -584,12 +625,12 @@ class XML_handler:
             main_handler.test_name= child.get('name')
             func_call = getattr(main_handler, func)
         except AttributeError:
-            print('Error function name '+ func)
+            print_log('Error function name '+ func)
 
         main_handler.cmd_list= []
         for cmd in action:
             if cmd.tag != 'cmd':
-                print('Wrong cmd list tag '+ cmd.tag)
+                print_log('Wrong cmd list tag '+ cmd.tag)
                 raise
             main_handler.cmd_list.append(cmd)
         CurrTestPassed= func_call()
@@ -598,7 +639,7 @@ class XML_handler:
         if CurrTestPassed == True:
             test_res= "Passed"
 
-        print(child.text +': ' + test_res)
+        print_log(child.text +': ' + test_res)
      #   if hasattr(main_handler, "test_descr"):
      #       result_file.write(main_handler.test_descr+ ': ' + test_res + '\n')
      #       result_file.flush()
@@ -608,13 +649,13 @@ class XML_handler:
                                     
     def     SessionProcess(self, session_name, main_handler_orig, attrib_dict= {}):    
         TestPassed = True
-        print()                     
-        print('Execute session ' + session_name)
-        print('Attrib_dict: '+ str(attrib_dict.keys()))
+        print_log()                     
+        print_log('Execute session ' + session_name)
+        print_log('Attrib_dict: '+ str(attrib_dict.keys()))
         main_handler=  copy.deepcopy(main_handler_orig )
         session= self.session_dict.get(session_name)
         if session == None:
-            print('Unallocated session name ' + session_name)
+            print_log('Unallocated session name ' + session_name)
             raise
         child_attrib_dict= dict(attrib_dict)  
         #Go through attributes and set them in the main_handler
@@ -622,36 +663,52 @@ class XML_handler:
             #Check if the attribute is existed in the main_handler
             if attrib not in child_attrib_dict.keys():
                 child_attrib_dict[attrib] = session.get(attrib)
+            else: 
+                #Check if the local attributes are more important than external.              
+                if self.CheckAttribVal(attrib, child_attrib_dict[attrib])== True:
+                    child_attrib_dict[attrib] = session.get(attrib)
+                
         TotalTestRes = True     
         #Run the tests
-        for child in session:
-            #Add attributes if they were not added before
-            child_attrib_dict_tmp = dict(child_attrib_dict)
-            for attrib in child.keys():
-                if attrib not in child_attrib_dict_tmp.keys():
-                    child_attrib_dict_tmp[attrib] = child.get(attrib)
-               
-            if child.tag == 'session':
-                TestPassed = self.SessionProcess(child.text, main_handler, child_attrib_dict_tmp)
-            elif child.tag == 'action':
-                TestPassed = self.ActionProcess(child, main_handler, child_attrib_dict_tmp)
-            else:
-                print('Wrong session element parameter '+ child.tag)
-                raise
+        for iter_num in range(int(self.iterations)):
+            for child in session:
+                #Add attributes if they were not added before
+                child_attrib_dict_tmp = dict(child_attrib_dict)
+                child_attrib_dict_tmp['iter_num']= str(iter_num)
+                for attrib in child.keys():
+                    if attrib not in child_attrib_dict_tmp.keys():
+                        child_attrib_dict_tmp[attrib] = child.get(attrib)
+                   
+                if child.tag == 'session':
+                    TestPassed = self.SessionProcess(child.text, main_handler, child_attrib_dict_tmp)
+                elif child.tag == 'action':
+                    TestPassed = self.ActionProcess(child, main_handler, child_attrib_dict_tmp)
+                elif child.tag == 'thread_session' or child.tag == 'thread_action':
+                    new_thread= ThreadWrapper(self, child, main_handler, child_attrib_dict_tmp)
+                    self.threads.append(new_thread)
+                    new_thread.start()
+                
+                else:
+                    print_log('Wrong session element parameter '+ child.tag)
+                    raise
+                
+                TotalTestRes = TotalTestRes and TestPassed
+            for t in self.threads:
+                TestPassed= t.join()
+                TotalTestRes = TotalTestRes and TestPassed
             
-            TotalTestRes = TotalTestRes and TestPassed
-        print('Finish executing session ' + session_name )
+        print_log('Finish executing session ' + session_name )
                     
         if TotalTestRes== True:
-            print('Automation test passed')
+            print_log('Automation test passed')
             return True
         else:
-            print('Automation test failed')
+            print_log('Automation test failed')
             return False
     
     def DataParserList(self, files_list):
         for file in files_list:
-            print('Parsing XML file:'+ file)
+            print_log('Parsing XML file:'+ file)
             self.DataParser(file)
             
     
@@ -705,10 +762,10 @@ def test_processing(xml_handler):
             msg.set_content(fp.read())
         if 'test_report_build' in test_report_action:
             pwd_path = os.getcwd()
-            print(pwd_path)
+            print_log(pwd_path)
             rel_dir_up = rel_dir_path + '/test_report_Log.txt'
             rel_dir_path_host_details = rel_dir_path + '/host_details.txt'
-            print(pwd_path)
+            print_log(pwd_path)
             shutil.copy2(rel_dir_up,pwd_path)
             shutil.copy2(rel_dir_path_host_details,pwd_path)
             filenames = ["branch_details.txt", "host_details.txt", "test_report_Log.txt"]

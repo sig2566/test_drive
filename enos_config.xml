@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<root>
+<targets_list>
+
+  <target
+    name="UEP_UTL_14_132_SERIAL"
+	ip="172.16.13.60"
+    uid="root"
+    passw="devops123"
+    info="UTL test board"
+    >
+    <prolog>
+    	<cmd>'kill -9 minicom'</cmd>
+    	<cmd>'minicom'</cmd>
+    	<cmd>'root'</cmd>
+    	<cmd>'root'</cmd>
+     </prolog>
+    <epilog>
+     	<cmd>'echo Connection Finished'</cmd>
+    </epilog>
+  
+  </target>
+
+
+ </targets_list> 
+
+<actions_list>
+
+	<action
+		func= "rauc_swupdate_test_action"
+		name= "rauc_swupdate_test_action"
+		>
+	</action>
+
+
+ 	<action
+		name= "delay_tmp"
+		func= "exec_cmdlist"
+		>
+		<cmd> 'sleep ' + obj.iter_num </cmd>
+		<cmd> "reboot " </cmd>
+		<cmd> 'exit' </cmd>
+	</action>   
+
+ 	<action
+		name= "recovery_setup"
+		func= "exec_cmdlist"
+		>
+		<cmd> 'rauc status mark-active ' + obj.bank </cmd>
+		<cmd> 'reboot ; exit' </cmd>
+	</action> 
+	
+	<action
+		func= "sw_update_upload"
+		name= "sw_update_upload"
+		>
+	</action>
+	
+
+
+</actions_list>
+
+<sessions_list>
+
+     <!-- Select partition  -->
+     <session
+        name="SELECT_PARTITION"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9600"
+        iterations= "1"
+        bank="recovery.0"
+        >
+        <action>recovery_setup</action>	
+        <action>reboot_wait</action>
+        
+     </session>    
+
+     
+     <!-- Linux SW update test in general case  -->
+     <session
+        name="LINUX_SW_UPDATE_TST"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9600"
+        iterations= "3"
+        >
+        <action>rauc_swupdate_test_action</action>	
+     </session>    
+
+     <!-- Linux SW update test race condition test  -->
+     <session
+        name="LINUX_SW_UPDATE_RACE_TST"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9600"
+        iterations= "3"
+        >
+        <action>sw_update_upload</action>
+        <thread_action>delay_tmp</thread_action>
+        <action>rauc_swupdate_test_action</action>
+        <action>reboot_wait</action>	
+     </session>    
+
+
+     <!-- Linux SW update full test  -->
+     <session
+        name="LINUX_SW_UPDATE_FULL_TST"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9900"
+        iterations= "3"
+        >
+        <session>SELECT_PARTITION</session>
+        <session>LINUX_SW_UPDATE_TST</session>	
+     </session>    
+
+
+ 	
+</sessions_list>
+</root>

@@ -16,39 +16,56 @@ class ENOS_main_handler(test_drive.MainHandler):
         for out_str in res_list:
             m= parse.search(out_str)
             if m:
-                print('Found boot partition ' + m.group(1))
+                test_drive.print_log('Found boot partition ' + m.group(1))
                 return m.group(1)
         return ''
                     
     
     def rauc_swupdate_test_action(self):
-        num=  int(self.iterations)
-        while(num>0):
-            num-=1
-            self.CommonSetup()
-            self.exec_target.run_cmd('cd /opt/uep')
-            self.exec_target.run_cmd('tftp ' + self.exec_host.ip + ' -g -r swupdate.raucb')                
-            res_list= self.exec_target.run_cmd('rauc status')
-            swpartition= self.chk_booted_next_partition(res_list)
-            if swpartition=='':
-                print('Booted partition was not found')
-                return False
-            self.exec_target.run_cmd('rauc install swupdate.raucb')
-            self.exec_target.close_connection()
-            res= self.reboot_test()
-            if res == False:
-                print('Reboot of server was failed')
-                return False
-            self.CommonSetup()
-            res_list= self.exec_target.run_cmd('rauc status')
-            swpartition1= self.chk_booted_next_partition(res_list)
-            self.exec_target.close_connection()
-            if swpartition1 == swpartition :
-                print('Swap to new partition was failed')
-                return False
-            
-        print("rauc test was passes")
+        self.sw_update_upload()
+        self.CommonSetup()
+        self.exec_target.run_cmd('cd /opt/uep')
+        res_list= self.exec_target.run_cmd('rauc status')
+        swpartition= self.chk_booted_next_partition(res_list)
+        if swpartition=='':
+            test_drive.print_log('Booted partition was not found')
+            return False
+        self.exec_target.run_cmd('rauc install swupdate.raucb')
+
+        res= self.reboot_test()
+        if res == False:
+            test_drive.print_log('Reboot of server was failed')
+            return False
+        self.CommonSetup()
+        res_list= self.exec_target.run_cmd('rauc status')
+        swpartition1= self.chk_booted_next_partition(res_list)
+        self.exec_target.close_connection()
+        if swpartition1 == swpartition :
+            test_drive.print_log('Swap to new partition was failed')
+            return False
+        
+        test_drive.print_log("rauc test was passes")
         return True
+
+    def sw_update_upload(self):
+        self.CommonSetup()
+        self.exec_target.run_cmd('cd /opt/uep')
+        self.exec_target.run_cmd('tftp ' + self.exec_host.ip + ' -g -r swupdate.raucb')                
+        self.exec_target.close_connection()
+    
+    def rauc_sw_update_install(self):
+
+        self.CommonSetup()
+        self.exec_target.run_cmd('cd /opt/uep')
+        res_list= self.exec_target.run_cmd('rauc status')
+        swpartition= self.chk_booted_next_partition(res_list)
+        if swpartition=='':
+            test_drive.print_log('Booted partition was not found')
+            return False
+        test_drive.print_log("Current partition: "+ swpartition)
+        self.exec_target.run_cmd('rauc install swupdate.raucb')
+        #self.exec_target.close_connection()
+        
 
 exec_target= test_drive.ExecTarget()                
 test_handler = ENOS_main_handler(exec_target)

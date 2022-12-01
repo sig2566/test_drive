@@ -143,12 +143,7 @@
 		>
 	</action>
 	
-	<action
-		func= "rauc_swupdate_test_action"
-		name= "rauc_swupdate_test_action"
-		>
-	</action>
-    
+
     <action  
     	name="git_update"
     	func= "exec_cmdlist"
@@ -158,6 +153,13 @@
     	<cmd> 'git clean -xdf' </cmd>
     	<cmd>'git pull'</cmd>
     </action>
+    
+    <action
+		name= "reboot_wait"
+		func= "ping_alive_test"
+		>
+	</action>
+ 
 	
 </actions_list>
 
@@ -207,16 +209,6 @@
         <action>git_remote_rep</action>	
      </session>    
      
-     <!-- Linux SW update test  -->
-     <session
-        name="LINUX_SW_UPDATE_TST"
-        host = "build_VM_61"
-        target="UEP_UTL_14_132"
-		timeout= "9600"
-        iterations= "3"
-        >
-        <action>rauc_swupdate_test_action</action>	
-     </session>    
 
  	
 </sessions_list>
