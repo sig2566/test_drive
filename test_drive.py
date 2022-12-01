@@ -287,11 +287,15 @@ class ExecTarget:
         return 
     
     def close_connection(self):
-        for cmd in self.epilog:
-            res = self.XMLcmd2cmd(cmd)
-
-        self.is_connected = False
-        self.ssh_client.close()
+        try:
+            for cmd in self.epilog:
+                res = self.XMLcmd2cmd(cmd)
+    
+            self.is_connected = False
+            self.ssh_client.close()
+        except:
+            print_log( "Warning: disconnect was failed")
+        
         
 #General class, processing all build, deployment and test requests 
 class MainHandler:
@@ -357,10 +361,7 @@ class MainHandler:
         return True
        
           
-
-        
-    def CommonSetup(self):
-        print_log("self.host_switch="+self.host_switch)
+    def TargetConfig(self):
         if self.host_switch== 'False' or self.host == '':
             self.exec_target  = self.targets_dict[self.target]
             if self.host != '':
@@ -374,6 +375,11 @@ class MainHandler:
                 self.exec_host= self.targets_dict[self.target]
             self.exec_path = self.host_path
             self.exec_path_git_repo = self.host_path_git_repo
+        
+        
+    def CommonSetup(self):
+        print_log("self.host_switch="+self.host_switch)
+        self.TargetConfig()
         self.exec_target.open_connect(self)
         return
          
@@ -441,8 +447,9 @@ class MainHandler:
     def ping_alive_test(self):
         response= 1
         pingstatus = False
-        time.sleep(10)
+        time.sleep(40)
         tic = time.perf_counter()
+        self.TargetConfig()
         for i in range(120):
             response = os.system("ping -c 1 " + self.exec_target.ip)
             # and then check the response...        
@@ -464,7 +471,7 @@ class MainHandler:
             
         
     def  exec_cmdlist(self):
-        print_log("Run commands by list")
+        print_log("Run commands by list")        
         self.CommonSetup()
         for cmd in self.cmd_list:
             self.exec_target.XMLcmd2cmd(cmd)

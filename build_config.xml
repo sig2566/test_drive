@@ -155,7 +155,7 @@
     </action>
     
     <action
-		name= "reboot_wait"
+		name= "alive_wait"
 		func= "ping_alive_test"
 		>
 	</action>

@@ -71,8 +71,10 @@
         iterations= "1"
         bank="recovery.0"
         >
+        <!-- Select recovery partition and reboot -->
         <action>recovery_setup</action>	
-        <action>reboot_wait</action>
+        <!--Wait for reboot complite -->
+        <action>alive_wait</action>
         
      </session>    
 
@@ -81,11 +83,11 @@
      <session
         name="LINUX_SW_UPDATE_TST"
         host = "build_VM_61"
-        target="UEP_UTL_14_132"
 		timeout= "9600"
         iterations= "3"
         >
-        <action>rauc_swupdate_test_action</action>	
+        <action target="UEP_UTL_14_132">alive_wait</action>
+        <action target="UEP_UTL_14_132">rauc_swupdate_test_action</action>	
      </session>    
 
      <!-- Linux SW update test race condition test  -->
@@ -99,7 +101,7 @@
         <action>sw_update_upload</action>
         <thread_action>delay_tmp</thread_action>
         <action>rauc_swupdate_test_action</action>
-        <action>reboot_wait</action>	
+        <action>alive_wait</action>	
      </session>    
 
 
@@ -109,10 +111,9 @@
         host = "build_VM_61"
         target="UEP_UTL_14_132"
 		timeout= "9900"
-        iterations= "3"
         >
-        <session>SELECT_PARTITION</session>
-        <session>LINUX_SW_UPDATE_TST</session>	
+        <session iterations= "1">SELECT_PARTITION</session>
+        <session iterations= "3">LINUX_SW_UPDATE_TST</session>	
      </session>    
 
 
