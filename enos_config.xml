@@ -32,12 +32,18 @@
 		>
 	</action>
 
+	<action
+		func= "rauc_sw_update_install"
+		name= "rauc_sw_update_install"
+		>
+	</action>
+
 
  	<action
-		name= "delay_tmp"
+		name= "delay_reboot"
 		func= "exec_cmdlist"
 		>
-		<cmd> 'sleep ' + obj.iter_num </cmd>
+		<cmd> 'sleep ' + str((int(obj.iter_num)+1)*5) </cmd>
 		<cmd> "reboot " </cmd>
 		<cmd> 'exit' </cmd>
 	</action>   
@@ -99,8 +105,8 @@
         iterations= "3"
         >
         <action>sw_update_upload</action>
-        <thread_action>delay_tmp</thread_action>
-        <action>rauc_swupdate_test_action</action>
+        <thread_action>delay_reboot</thread_action>
+        <action>rauc_sw_update_install</action>
         <action>alive_wait</action>	
      </session>    
 
@@ -111,6 +117,7 @@
         host = "build_VM_61"
         target="UEP_UTL_14_132"
 		timeout= "9900"
+		iterations= "3"
         >
         <session iterations= "1">SELECT_PARTITION</session>
         <session iterations= "3">LINUX_SW_UPDATE_TST</session>	

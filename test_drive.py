@@ -58,9 +58,9 @@ def handler(signum, frame):
     raise TimeoutError()
 
 def print_log(log_str=""):
-    thread_id= threading.get_ident()
+    thread_name= threading.currentThread().getName()
     timestamp= str(time.time())
-    out_str= timestamp + "\t" + str(thread_id)+"\t" + log_str  
+    out_str= timestamp + "\t" + thread_name+"\t" + log_str  
     print(out_str)
       
 TestPassed= True
@@ -186,7 +186,6 @@ class ExecTarget:
         sherr = []
         exit_status = 0
         timeout_sec= int(self.main_handler.timeout)
-        signal.signal(signal.SIGALRM, handler)
         signal.alarm(timeout_sec)
         try:
             for line_dat in self.stdout:
@@ -481,20 +480,24 @@ class MainHandler:
 
 #Thread wrapper
 class ThreadWrapper(Thread):
-    def __init__(self, child, test_handler, attrib, xml_handler):
-        threading.Thread.__init__(self)
-        self.child= child
+    def __init__(self, thread_name, child, test_handler, attrib, xml_handler):
+        threading.Thread.__init__(self, name= thread_name)
+        self.child= copy.deepcopy(child)
         self.test_handler= test_handler
         self.attrib= attrib
         self.xml_handler= xml_handler
-        self.result= FALSE
+        self.result= False
         
     def run(self):
         print_log("Start new thread")
-        if self.child.tag == 'thread_session':            
-            self.result= self.xml_handler.ActionProcess(self.xml_handler, self.child, self.test_handler, self.attrib)
-        elif self.child.tag == 'thread_session':
-            self.result= self.xml_handler.SessionProcess(self.xml_handler, self.child.text, self.test_handler, self.attrib)
+        if self.child.tag == 'thread_session':
+            self.child.tag = "session"
+            #child, main_handler_orig, child_attrib_dict_tmp    
+            self.result= self.xml_handler.SessionProcess(session_name= self.child.text, main_handler_orig= self.test_handler, attrib_dict= self.attrib)
+        elif self.child.tag == 'thread_action':
+            self.child.tag = "action"
+            #session_name, main_handler_orig, attrib_dict
+            self.result= self.xml_handler.ActionProcess(child= self.child, main_handler_orig= self.test_handler, child_attrib_dict_tmp=self.attrib)
         else:
             print_log("Error: Wromg tag self.child.tag")
             return False
@@ -582,6 +585,7 @@ class XML_handler:
             self.session_dict[session_name] = session
                 
     def SessionProcessList(self, session_name_list, main_handler, attrib_dict):
+        signal.signal(signal.SIGALRM, handler)
         for session_name in session_name_list:
             print_log('Processing test:'+session_name)
             self.SessionProcess(session_name,main_handler, attrib_dict)   
@@ -597,7 +601,7 @@ class XML_handler:
             print_log('Config Error: architecture is '+ val)
             raise
         #Do not forward the iteration attribute recursively.
-        if key == 'iteration':
+        if key == 'iterations':
             return False
         return True
         
@@ -672,12 +676,13 @@ class XML_handler:
                 child_attrib_dict[attrib] = session.get(attrib)
             else: 
                 #Check if the local attributes are more important than external.              
-                if self.CheckAttribVal(attrib, child_attrib_dict[attrib])== True:
+                if self.CheckAttribVal(attrib, child_attrib_dict[attrib])!= True:
                     child_attrib_dict[attrib] = session.get(attrib)
                 
         TotalTestRes = True     
         #Run the tests
-        for iter_num in range(int(self.iterations)):
+        iterations= session.get('iterations')
+        for iter_num in range(int(iterations)):
             for child in session:
                 #Add attributes if they were not added before
                 child_attrib_dict_tmp = dict(child_attrib_dict)
@@ -691,19 +696,23 @@ class XML_handler:
                 elif child.tag == 'action':
                     TestPassed = self.ActionProcess(child, main_handler, child_attrib_dict_tmp)
                 elif child.tag == 'thread_session' or child.tag == 'thread_action':
-                    new_thread= ThreadWrapper(self, child, main_handler, child_attrib_dict_tmp)
+                    #child, test_handler, attrib, xml_handler
+                    new_thread= ThreadWrapper(thread_name= child.text, xml_handler= self, child= child, test_handler= main_handler, attrib= child_attrib_dict_tmp)
                     self.threads.append(new_thread)
                     new_thread.start()
+                    print_log('Finish activation of thread ' + child.text) 
                 
                 else:
                     print_log('Wrong session element parameter '+ child.tag)
                     raise
                 
                 TotalTestRes = TotalTestRes and TestPassed
+                
             for t in self.threads:
                 TestPassed= t.join()
                 TotalTestRes = TotalTestRes and TestPassed
-            
+            self.threads= []
+            print_log('Finish iteration ' + str(iter_num) + ' from ' +  iterations + ' iterations')
         print_log('Finish executing session ' + session_name )
                     
         if TotalTestRes== True:

@@ -10,6 +10,7 @@ class ENOS_main_handler(test_drive.MainHandler):
     def get_current_partition(self):
         self.CommonSetup()        
         self.exec_target.close_connection()
+        return True
             
     def chk_booted_next_partition(self, res_list):
         parse= re.compile('\[(r.*)\].*booted')
@@ -31,7 +32,6 @@ class ENOS_main_handler(test_drive.MainHandler):
             test_drive.print_log('Booted partition was not found')
             return False
         self.exec_target.run_cmd('rauc install swupdate.raucb')
-
         res= self.reboot_test()
         if res == False:
             test_drive.print_log('Reboot of server was failed')
@@ -52,6 +52,7 @@ class ENOS_main_handler(test_drive.MainHandler):
         self.exec_target.run_cmd('cd /opt/uep')
         self.exec_target.run_cmd('tftp ' + self.exec_host.ip + ' -g -r swupdate.raucb')                
         self.exec_target.close_connection()
+        return True
     
     def rauc_sw_update_install(self):
 
@@ -64,6 +65,7 @@ class ENOS_main_handler(test_drive.MainHandler):
             return False
         test_drive.print_log("Current partition: "+ swpartition)
         self.exec_target.run_cmd('rauc install swupdate.raucb')
+        return True
         #self.exec_target.close_connection()
         
 
