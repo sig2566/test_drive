@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<root>
+<targets_list>
+
+ 
+  <target
+    name="UEP_UTL_14_132_ISS"
+	ip="172.16.14.132"
+    uid="root"
+    passw="root"
+    info="UTL test board"
+    >
+    <prolog>
+    	<cmd>'killall ISS.exe'</cmd>
+    	<cmd>'cd /opt/uep/apps/'</cmd>
+    	<cmd final= "ISS login:" >'./AppInit_nicISS'</cmd>
+    	<cmd final="Password:">'root'</cmd>
+    	<cmd final="ISS#">'admin123'</cmd>
+     </prolog>
+    <epilog>
+    </epilog> 
+  </target>
+  
+ </targets_list> 
+
+<actions_list>
+
+  	<action
+		name= "iss_version_test"
+		func= "exec_cmdlist"
+		>
+		<cmd final= "ISS#" pass="Hardware Details.*Software Details"> 'show system information'</cmd>
+	</action> 
+
+  	<action
+		name= "iss_tftp_upgrade_immediate_activate_test"
+		func= "exec_cmdlist"
+		protocol_ip="tftp://172.16.15.61/"
+		bundle_name = "/swupdate.raucb"
+		>
+		<cmd final= "ISS#" pass="Installing .* succeeded"
+		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
+		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
+		     > 'firmware activate immediate database migrate on'</cmd>		     
+			<cmd final="The system is going down for reboot NOW!"
+			>'Y'</cmd>
+	</action> 
+	
+ 
+
+
+</actions_list>
+
+<sessions_list>
+
+     <!-- Check system information print  -->
+     <session
+        name="ISS_VERSION_TST"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132_ISS"
+		timeout= "9600"
+        iterations= "1"
+         >
+        <action>iss_version_test</action>	
+        
+     </session>    
+
+ 	<!-- ISS immideate upgrade from tftp server -->
+      <session
+        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132_ISS"
+		timeout= "9600"
+        iterations= "10"
+         >
+        <action>iss_tftp_upgrade_immediate_activate_test</action>
+        <action>alive_wait</action>		
+        <session>ISS_VERSION_TST</session>
+     </session>    
+
+	 	<!-- ISS immideate upgrade from sftp server -->
+      <session
+        name="ISS_IMMIDEATE_UPGRADE_SFTP_TST"
+        protocol_ip= "sftp://root:devops123@172.16.15.61//mnt/80GB/opt/"
+         >
+        <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+     </session>     		
+</sessions_list>
+</root>

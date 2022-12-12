@@ -1,5 +1,7 @@
+import time
 import re
 import test_drive
+import test_powerdownup
 from conda.common._logic import FALSE
 #from conda.common._logic import FALSE
 
@@ -20,7 +22,20 @@ class ENOS_main_handler(test_drive.MainHandler):
                 test_drive.print_log('Found boot partition ' + m.group(1))
                 return m.group(1)
         return ''
-                    
+     
+    def nps_power_down_up(self):
+        test_pwr= test_powerdownup.TestOffonpw()
+        test_pwr.setup_method("tmp")
+        test_pwr.test_offonpw()
+        test_pwr.teardown_method("tmp")
+        return True
+        
+    def wait_pwr_down_up(self):
+        delay_time= (int(self.iter_num)+1)*5
+        time.sleep(delay_time)
+        self.nps_power_down_up()
+        return True
+        
     
     def rauc_swupdate_test_action(self):
         self.sw_update_upload()

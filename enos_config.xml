@@ -10,7 +10,7 @@
     info="UTL test board"
     >
     <prolog>
-    	<cmd>'kill -9 minicom'</cmd>
+    	<cmd>'killall -9 minicom'</cmd>
     	<cmd>'minicom'</cmd>
     	<cmd>'root'</cmd>
     	<cmd>'root'</cmd>
@@ -21,7 +21,7 @@
   
   </target>
 
-
+  
  </targets_list> 
 
 <actions_list>
@@ -40,7 +40,7 @@
 
 
  	<action
-		name= "delay_reboot"
+		name= "immideate_reboot"
 		func= "exec_cmdlist"
 		>
 		<cmd> 'sleep ' + str((int(obj.iter_num)+1)*5) </cmd>
@@ -49,7 +49,13 @@
 	</action>   
 
  	<action
-		name= "recovery_setup"
+		name= "delay_pwr_off_on"
+		func= "wait_pwr_down_up"
+		>
+	</action>   
+
+ 	<action
+		name= "select_partition"
 		func= "exec_cmdlist"
 		>
 		<cmd> 'rauc status mark-active ' + obj.bank </cmd>
@@ -62,6 +68,11 @@
 		>
 	</action>
 	
+	<action
+		func= "nps_power_down_up"
+		name= "power_down_up"
+		>
+	</action>
 
 
 </actions_list>
@@ -78,7 +89,7 @@
         bank="recovery.0"
         >
         <!-- Select recovery partition and reboot -->
-        <action>recovery_setup</action>	
+        <action>select_partition</action>	
         <!--Wait for reboot complite -->
         <action>alive_wait</action>
         
@@ -105,11 +116,24 @@
         iterations= "3"
         >
         <action>sw_update_upload</action>
-        <thread_action>delay_reboot</thread_action>
+        <thread_session>RANDOM_DELAY_REBOOT</thread_session>
         <action>rauc_sw_update_install</action>
         <action>alive_wait</action>	
      </session>    
 
+     <!-- Linux SW update test race condition test power down up -->
+     <session
+        name="LINUX_SW_UPDATE_RACE_PWR_OFF_DOWN_TST"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9600"
+        iterations= "3"
+        >
+        <action>sw_update_upload</action>
+        <thread_action>delay_pwr_off_on</thread_action>
+        <action>rauc_sw_update_install</action>
+        <action>alive_wait</action>	
+     </session>  
 
      <!-- Linux SW update full test  -->
      <session
@@ -117,13 +141,50 @@
         host = "build_VM_61"
         target="UEP_UTL_14_132"
 		timeout= "9900"
-		iterations= "3"
+		iterations= "1"
         >
         <session iterations= "1">SELECT_PARTITION</session>
-        <session iterations= "3">LINUX_SW_UPDATE_TST</session>	
+        <session iterations= "2">LINUX_SW_UPDATE_TST</session>	
      </session>    
 
+     <!-- Linux SW update switch partitions test  -->
+     <session
+        name="SWITCH_PARTITIONS_TST"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9900"
+		iterations= "1"
+        >
+        <session bank= "recovery.0">SELECT_PARTITION</session>
+        <action>alive_wait</action>	
+        <session bank= "rootfs.0">SELECT_PARTITION</session>
+        <action>alive_wait</action>	
+        <session bank= "rootfs.1">SELECT_PARTITION</session>
+        <action>alive_wait</action>		
+     </session>    
 
- 	
+     <!-- Linux SW update full test  -->
+     <session
+        name="LINUX_SW_PWR_OFF_UP"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9900"
+		iterations= "1"
+        >
+        <action>power_down_up</action>
+     </session> 	
+     
+      <!-- Wait for random time interval between start_time 
+      and end_time attributes and then reboot  -->
+     <session
+        name="RANDOM_DELAY_REBOOT"
+        host = "build_VM_61"
+        target="UEP_UTL_14_132"
+		timeout= "9600"
+        iterations= "1"
+        >
+        <thread_action>random_delay</thread_action>
+        <action>immideate_reboot</action>
+     </session>      
 </sessions_list>
 </root>

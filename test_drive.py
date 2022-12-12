@@ -14,9 +14,12 @@ from gevent.libev.corecext import child
 from nose.plugins import attrib
 from conda.common._logic import FALSE
 from Cython.Compiler.Naming import self_cname
+from networkx.generators import line
+from anaconda_project.internal.cli.environment_commands import lock
 print(sys.version)
 import time
 import re
+from random import uniform
 #import rpyc
 #import numpy as np
 #import matplotlib.pyplot as plt
@@ -47,6 +50,8 @@ import psutil
 # from keyboard import press
 
 #from _ast import Raise
+#Attributes, which are not transfered from up to down
+attribute_exception_list = ["iterations", "timeout"]
 
 # from sphinx.util.pycompat import sys_encoding
 # time.sleep(30)
@@ -56,12 +61,15 @@ class TimeoutError(Exception):
 def handler(signum, frame):
     print_log("Forever is over!")
     raise TimeoutError()
-
+lock_print = threading.Lock()
 def print_log(log_str=""):
+    global lock_print
+    lock_print.acquire()
     thread_name= threading.currentThread().getName()
     timestamp= str(time.time())
     out_str= timestamp + "\t" + thread_name+"\t" + log_str  
     print(out_str)
+    lock_print.release()
       
 TestPassed= True
 def check_result(test_res, success_pattern= '[Tt]ests [Pp]assed'):
@@ -109,6 +117,10 @@ class ExecTarget:
         self.passw= 'sw_grp2'
     #    self.obj = MainHandler()
         self.timeout_err = True
+        self.stdin = None 
+        self.stdout = None
+        self.stderr= None
+
         
     def add_parent_class_callback(self, main_handler):
         self.obj= main_handler
@@ -159,25 +171,38 @@ class ExecTarget:
         print_log("cmd_str="+cmd_str)
         err_check= False
         pass_pattern = None
+        final_pattern = None
         if 'chk' in xml_cmd.keys():
             err_check   = True 
         if 'pass' in xml_cmd.keys():
             pass_pattern= xml_cmd.get('pass')
+            
         
-        return self.run_cmd(cmd_str, err_check, pass_pattern)
+        if 'final' in xml_cmd.keys():
+            final_pattern= xml_cmd.get('final')
         
-    def run_cmd(self, cmd, check_error=False, pass_pattern= None):
+        return self.run_cmd(cmd_str, err_check, pass_pattern, finish_str= final_pattern)
+        
+    def run_cmd(self, cmd, check_error=False, pass_pattern= None, finish_str= None):
+        finish_tst_str = None
         CurrTestPassed = True
         print_log(cmd)
         if self.timeout_err == True:
             return
         cmd = cmd.strip('\n')
+        #for character in cmd:
+         #   self.stdin.write(character)
+          #  time.sleep(0.1)
         self.stdin.write(cmd + '\n')
+        #self.stdin.write("\n")
         start_str= 'end of stdOUT buffer'
-        finish = start_str+'. finished with exit status'
-        
-        echo_cmd = 'echo {} $?'.format(finish)
-        self.stdin.write(echo_cmd + '\n')
+        if finish_str != None:
+            finish_mark= re.compile(finish_str)
+        else:        
+            #Added new line to check that the previous command was ended    
+            finish_tst_str = start_str+'. finished with exit status'        
+            echo_cmd = 'echo {} $?'.format(finish_tst_str)
+            self.stdin.write(echo_cmd + '\n')
         #shin = self.stdin
         self.stdin.flush()
         p_cmd = re.compile(cmd)
@@ -187,6 +212,8 @@ class ExecTarget:
         exit_status = 0
         timeout_sec= int(self.main_handler.timeout)
         signal.alarm(timeout_sec)
+        more_cont_str= "--More--"
+        more_re= re.compile(more_cont_str)
         try:
             for line_dat in self.stdout:
                 line= str(line_dat)
@@ -198,15 +225,23 @@ class ExecTarget:
                     shout = []
                 elif p_echo.search(line):
                     pass
-                elif line.startswith(finish):
+                elif (finish_tst_str!= None) and line.startswith(finish_tst_str):
                     # our finish command ends with the exit status
-                    exit_status = int(line.rsplit(maxsplit=1)[1])
-                    if exit_status and check_error==True:
+                    #exit_status = int(line.rsplit(maxsplit=1)[1])
+                    print_log(line)
+                    #if exit_status and check_error==True:
+                    if check_error==True:
                         # stderr is combined with stdout.
                         # thus, swap sherr with shout in a case of failure.
-                        sherr = shout
+                        sherr = self.stderr
                         shout = []
                     break
+                elif (finish_str != None) and finish_mark.search(line):
+                    print_log(line)
+                    break
+                elif more_re.search(line):
+                    self.stdin.write(" ")
+                    self.stdin.flush()
                 else:
                     # get rid of 'coloring and formatting' special characters
                     print_log(line)
@@ -225,14 +260,15 @@ class ExecTarget:
             signal.alarm(0)
 
         # first and last lines of shout/sherr contain a prompt
-        if shout and echo_cmd in shout[-1]:
-            shout.pop()
-        if shout and cmd in shout[0]:
-            shout.pop(0)
-        if sherr and echo_cmd in sherr[-1]:
-            sherr.pop()
-        if sherr and cmd in sherr[0]:
-            sherr.pop(0)
+        if finish_tst_str!= None:
+            if shout and echo_cmd in shout[-1]:
+                shout.pop()
+            if shout and cmd in shout[0]:
+                shout.pop(0)
+            if sherr and echo_cmd in sherr[-1]:
+                sherr.pop()
+            if sherr and cmd in sherr[0]:
+                sherr.pop(0)
 
         
         if len(sherr)!= 0:
@@ -274,8 +310,9 @@ class ExecTarget:
         #     print_log(error)
         #    raise
         channel = self.ssh_client.invoke_shell()
-        self.stdin = channel.makefile('wb')
+        self.stdin = channel.makefile('ab') 
         self.stdout = channel.makefile('r')
+        self.stderr= channel.makefile_stderr()
 
         self.is_connected = True
         for cmd in self.prolog:
@@ -326,7 +363,10 @@ class MainHandler:
         self.test_case = '.'
         #Add access to environment variables
         self.exec_target.add_parent_class_callback(self)
-       
+        self.iter_num= 0
+        self.start_time=0
+        self.end_time=3
+        
        
         
     def git_local_rep(self):
@@ -358,7 +398,19 @@ class MainHandler:
         text_file.close()  
         self.exec_target.close_connection()
         return True
-       
+        
+        #Random delay between start_time till end_time.
+        #The start_time and end_time may be specified as attributes
+    def random_delay(self):
+        if int(self.start_time)>= int(self.end_time):
+            print_log("Sleep was failed. wrong start and stop times"+ self.start_time+ ' '+ self.end_time)
+            return False
+        time_range = int(self.end_time)- int(self.start_time)
+        delay_time= int(self.start_time) + uniform( time_range )
+        print_log("Delay started for "+ str(delay_time) + ' sec')
+        time.sleep(delay_time)
+        print_log("Finish delay")
+        return True   
           
     def TargetConfig(self):
         if self.host_switch== 'False' or self.host == '':
@@ -518,7 +570,7 @@ class XML_handler:
         self.test_handler = test_handler
         self.session_dict = {}
         self.iterations=1
-        self.threads= []
+        self.timeout = 30
         
     def Init(self, file_name):
         self.file_name = file_name
@@ -590,7 +642,7 @@ class XML_handler:
             print_log('Processing test:'+session_name)
             self.SessionProcess(session_name,main_handler, attrib_dict)   
 
-    def CheckAttribVal(self, key, val):
+    def CheckAttrbUpDownOrder(self, key, val):
         mode = ['debug', 'release']
         architecture= ['INTEL', 'ARM']
         if key=='mode' and val not in mode:
@@ -601,7 +653,7 @@ class XML_handler:
             print_log('Config Error: architecture is '+ val)
             raise
         #Do not forward the iteration attribute recursively.
-        if key == 'iterations':
+        if key in attribute_exception_list:
             return False
         return True
         
@@ -620,7 +672,7 @@ class XML_handler:
             #Check if the attribute is existed in the main_handler
             if attrib not in main_handler.__dict__:
                 print_log('Warning: unused attribute: '+attrib)
-            self.CheckAttribVal(attrib, action.get(attrib))
+            self.CheckAttrbUpDownOrder(attrib, action.get(attrib))
             main_handler.__dict__[attrib] = action.get(attrib)
         #Overwrite Action element attributes if necessary.
         for attrib in child_attrib_dict_tmp.keys():
@@ -628,7 +680,7 @@ class XML_handler:
             if attrib not in main_handler.__dict__:
                 print_log('Warning: unused attribute: '+attrib)
            
-            self.CheckAttribVal(attrib, child_attrib_dict_tmp[attrib])
+            self.CheckAttrbUpDownOrder(attrib, child_attrib_dict_tmp[attrib])
             main_handler.__dict__[attrib] = child_attrib_dict_tmp[attrib]
         
         try:
@@ -664,6 +716,7 @@ class XML_handler:
         print_log('Execute session ' + session_name)
         print_log('Attrib_dict: '+ str(attrib_dict.keys()))
         main_handler=  copy.deepcopy(main_handler_orig )
+        threads= []
         session= self.session_dict.get(session_name)
         if session == None:
             print_log('Unallocated session name ' + session_name)
@@ -674,21 +727,29 @@ class XML_handler:
             #Check if the attribute is existed in the main_handler
             if attrib not in child_attrib_dict.keys():
                 child_attrib_dict[attrib] = session.get(attrib)
-            else: 
-                #Check if the local attributes are more important than external.              
-                if self.CheckAttribVal(attrib, child_attrib_dict[attrib])!= True:
+        
+        for attrib in child_attrib_dict.keys():
+            #Check if the attribute inheritance is in up to down orderr
+            if self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib])!= True:
+                if attrib in session.keys():
                     child_attrib_dict[attrib] = session.get(attrib)
                 
+                self.__dict__[attrib] = child_attrib_dict[attrib]
+                #child_attrib_dict.pop(attrib)
+        
         TotalTestRes = True     
         #Run the tests
-        iterations= session.get('iterations')
+        iterations= self.iterations
         for iter_num in range(int(iterations)):
             for child in session:
                 #Add attributes if they were not added before
                 child_attrib_dict_tmp = dict(child_attrib_dict)
+                #send number of current iterations to child
                 child_attrib_dict_tmp['iter_num']= str(iter_num)
                 for attrib in child.keys():
                     if attrib not in child_attrib_dict_tmp.keys():
+                        child_attrib_dict_tmp[attrib] = child.get(attrib)
+                    elif self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib])!= True:
                         child_attrib_dict_tmp[attrib] = child.get(attrib)
                    
                 if child.tag == 'session':
@@ -697,8 +758,9 @@ class XML_handler:
                     TestPassed = self.ActionProcess(child, main_handler, child_attrib_dict_tmp)
                 elif child.tag == 'thread_session' or child.tag == 'thread_action':
                     #child, test_handler, attrib, xml_handler
-                    new_thread= ThreadWrapper(thread_name= child.text, xml_handler= self, child= child, test_handler= main_handler, attrib= child_attrib_dict_tmp)
-                    self.threads.append(new_thread)
+                    thread_name_tmp = threading.currentThread().getName() + '.' + child.text
+                    new_thread= ThreadWrapper(thread_name= thread_name_tmp, xml_handler= self, child= child, test_handler= main_handler, attrib= child_attrib_dict_tmp)
+                    threads.append(new_thread)
                     new_thread.start()
                     print_log('Finish activation of thread ' + child.text) 
                 
@@ -708,11 +770,11 @@ class XML_handler:
                 
                 TotalTestRes = TotalTestRes and TestPassed
                 
-            for t in self.threads:
+            for t in threads:
                 TestPassed= t.join()
                 TotalTestRes = TotalTestRes and TestPassed
-            self.threads= []
-            print_log('Finish iteration ' + str(iter_num) + ' from ' +  iterations + ' iterations')
+            threads= []
+            print_log('Finish iteration ' + str(iter_num) + ' from ' +  str(iterations) + ' iterations')
         print_log('Finish executing session ' + session_name )
                     
         if TotalTestRes== True:
