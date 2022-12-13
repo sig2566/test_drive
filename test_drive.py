@@ -212,6 +212,7 @@ class ExecTarget:
         exit_status = 0
         timeout_sec= int(self.main_handler.timeout)
         signal.alarm(timeout_sec)
+        print_log("timeout_sec=" + str(timeout_sec))
         more_cont_str= "--More--"
         more_re= re.compile(more_cont_str)
         try:
@@ -405,10 +406,11 @@ class MainHandler:
         if int(self.start_time)>= int(self.end_time):
             print_log("Sleep was failed. wrong start and stop times"+ self.start_time+ ' '+ self.end_time)
             return False
-        time_range = int(self.end_time)- int(self.start_time)
-        delay_time= int(self.start_time) + uniform( time_range )
+        event = threading.Event()
+        print_log('start_time='+self.start_time + ' end_time='+self.end_time)
+        delay_time= uniform( int(self.start_time), int(self.end_time)  )
         print_log("Delay started for "+ str(delay_time) + ' sec')
-        time.sleep(delay_time)
+        event.wait(delay_time)
         print_log("Finish delay")
         return True   
           
@@ -543,9 +545,8 @@ class ThreadWrapper(Thread):
     def run(self):
         print_log("Start new thread")
         if self.child.tag == 'thread_session':
-            self.child.tag = "session"
             #child, main_handler_orig, child_attrib_dict_tmp    
-            self.result= self.xml_handler.SessionProcess(session_name= self.child.text, main_handler_orig= self.test_handler, attrib_dict= self.attrib)
+            self.result= self.xml_handler.SessionProcess(session_name= self.child.text, main_handler_orig= self.test_handler, attrib_dict= self.attrib, new_thread= True)
         elif self.child.tag == 'thread_action':
             self.child.tag = "action"
             #session_name, main_handler_orig, attrib_dict
@@ -710,7 +711,7 @@ class XML_handler:
         
         
                                     
-    def     SessionProcess(self, session_name, main_handler_orig, attrib_dict= {}):    
+    def     SessionProcess(self, session_name, main_handler_orig, attrib_dict= {}, new_thread= False):    
         TestPassed = True
         print_log()                     
         print_log('Execute session ' + session_name)
@@ -751,7 +752,11 @@ class XML_handler:
                         child_attrib_dict_tmp[attrib] = child.get(attrib)
                     elif self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib])!= True:
                         child_attrib_dict_tmp[attrib] = child.get(attrib)
-                   
+                if new_thread==True:
+                    if child.tag == 'thread_session':
+                        child.tag= 'session'
+                    if child.tag == 'thread_action':
+                        child.tag = 'action'
                 if child.tag == 'session':
                     TestPassed = self.SessionProcess(child.text, main_handler, child_attrib_dict_tmp)
                 elif child.tag == 'action':

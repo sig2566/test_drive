@@ -58,7 +58,7 @@
         name="ISS_VERSION_TST"
         host = "build_VM_61"
         target="UEP_UTL_14_132_ISS"
-		timeout= "9600"
+		timeout= "600"
         iterations= "1"
          >
         <action>iss_version_test</action>	
@@ -70,8 +70,8 @@
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST"
         host = "build_VM_61"
         target="UEP_UTL_14_132_ISS"
-		timeout= "9600"
-        iterations= "10"
+		timeout= "4600"
+        iterations= "1"
          >
         <action>iss_tftp_upgrade_immediate_activate_test</action>
         <action>alive_wait</action>		
@@ -82,8 +82,28 @@
       <session
         name="ISS_IMMIDEATE_UPGRADE_SFTP_TST"
         protocol_ip= "sftp://root:devops123@172.16.15.61//mnt/80GB/opt/"
+        iterations="100"
          >
         <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
-     </session>     		
+     </session>
+     
+          <!-- ISS SW update & race condition with reboot test  -->
+     <session
+        name="LINUX_SW_UPDATE_ISS_RACE_TST"
+        host = "build_VM_61"
+		timeout= "9600"
+        iterations= "1"
+        protocol_ip= "sftp://root:devops123@172.16.15.61//mnt/80GB/opt/"
+        >
+        <thread_session target="UEP_UTL_14_132"
+	        start_time="500"
+	        end_time="530"         
+	        >RANDOM_DELAY_REBOOT</thread_session>
+        <action target="UEP_UTL_14_132_ISS"
+        	timeout= "600"
+        	>iss_tftp_upgrade_immediate_activate_test</action>
+        <action target="UEP_UTL_14_132">alive_wait</action>
+        <session target="UEP_UTL_14_132_ISS">ISS_VERSION_TST</session>	
+     </session>       		
 </sessions_list>
 </root>

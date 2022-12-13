@@ -45,7 +45,6 @@
 		>
 		<cmd> 'sleep ' + str((int(obj.iter_num)+1)*5) </cmd>
 		<cmd> "reboot " </cmd>
-		<cmd> 'exit' </cmd>
 	</action>   
 
  	<action
@@ -113,9 +112,9 @@
         host = "build_VM_61"
         target="UEP_UTL_14_132"
 		timeout= "9600"
-        iterations= "3"
+        iterations= "1"
         >
-        <action>sw_update_upload</action>
+       <action>sw_update_upload</action>
         <thread_session>RANDOM_DELAY_REBOOT</thread_session>
         <action>rauc_sw_update_install</action>
         <action>alive_wait</action>	
