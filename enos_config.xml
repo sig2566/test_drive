@@ -106,6 +106,17 @@
         <action target="UEP_UTL_14_132">rauc_swupdate_test_action</action>	
      </session>    
 
+     <!-- Linux SW update test in general case  -->
+     <session
+        name="LINUX_SW_UPDATE_TST_UEP2025_131"
+        host = "build_VM_61"
+		timeout= "9600"
+        iterations= "3"
+        swupdate_file="swupdate_uep2025.raucb"
+        >
+        <session target="UEP_UEP2025_14_131">LINUX_SW_UPDATE_TST</session>
+     </session>    
+
      <!-- Linux SW update test race condition test  -->
      <session
         name="LINUX_SW_UPDATE_RACE_TST"

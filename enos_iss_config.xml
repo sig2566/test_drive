@@ -72,11 +72,22 @@
         target="UEP_UTL_14_132_ISS"
 		timeout= "4600"
         iterations= "1"
+        sw_update_file="swupdate_utl.rauc"
          >
         <action>iss_tftp_upgrade_immediate_activate_test</action>
         <action>alive_wait</action>		
         <session>ISS_VERSION_TST</session>
      </session>    
+
+ 	<!-- ISS immideate upgrade from tftp server -->
+      <session
+        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025_131"
+		ip= "172.16.14.131"
+		swupdate_filename= "swupdate_uep2025.raucb"
+		 >
+        <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+    </session>    
+
 
 	 	<!-- ISS immideate upgrade from sftp server -->
       <session

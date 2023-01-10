@@ -7,6 +7,7 @@ from conda.common._logic import FALSE
 
 class ENOS_main_handler(test_drive.MainHandler):
     def __init__(self, exec_target):
+        self.swupdate_file= 'swupdate.raucb'
         super().__init__(exec_target)
          
     def get_current_partition(self):
@@ -65,7 +66,7 @@ class ENOS_main_handler(test_drive.MainHandler):
     def sw_update_upload(self):
         self.CommonSetup()
         self.exec_target.run_cmd('cd /opt/uep')
-        self.exec_target.run_cmd('tftp ' + self.exec_host.ip + ' -g -r swupdate.raucb')                
+        self.exec_target.run_cmd('tftp ' + self.exec_host.ip + ' -g -r ' + self.swupdate_file)                
         self.exec_target.close_connection()
         return True
     

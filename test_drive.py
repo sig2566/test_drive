@@ -415,19 +415,14 @@ class MainHandler:
         return True   
           
     def TargetConfig(self):
-        if self.host_switch== 'False' or self.host == '':
-            self.exec_target  = self.targets_dict[self.target]
-            if self.host != '':
-                self.exec_host= self.targets_dict[self.host]
-        else:
-            #The treatment case, when executables and tests are located on host server and target 
-            #is mounted to the host server. In that case the host_switch allows running automatic
-            #data deployment on host and running tests on target
-            self.exec_target  = self.targets_dict[self.host]
-            if self.target!= '':
-                self.exec_host= self.targets_dict[self.target]
-            self.exec_path = self.host_path
-            self.exec_path_git_repo = self.host_path_git_repo
+        exec_target  = copy.deepcopy(self.targets_dict[self.target])
+        if self.host != '':
+            self.exec_host= self.targets_dict[self.host]
+        for var_name  in self.__dict__.keys():
+            if var_name in exec_target.__dict__.keys():
+                exec_target.__dict__[var_name] = self.__dict__.get(var_name)
+        
+        self.exec_target= exec_target
         
         
     def CommonSetup(self):
