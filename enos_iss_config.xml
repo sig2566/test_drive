@@ -13,7 +13,7 @@
     <prolog>
     	<cmd>'killall ISS.exe'</cmd>
     	<cmd>'cd /opt/uep/apps/'</cmd>
-    	<cmd final= "ISS login:" >'./AppInit_nicISS'</cmd>
+    	<cmd final= "ISS login:" timeout_action="new_line">'./AppInit_nicISS'</cmd>
     	<cmd final="Password:">'root'</cmd>
     	<cmd final="ISS#">'admin123'</cmd>
      </prolog>
@@ -36,7 +36,7 @@
 		name= "iss_tftp_upgrade_immediate_activate_test"
 		func= "exec_cmdlist"
 		protocol_ip="tftp://172.16.15.61/"
-		bundle_name = "/swupdate.raucb"
+		bundle_name = "swupdate.raucb"
 		>
 		<cmd final= "ISS#" pass="Installing .* succeeded"
 		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
@@ -58,7 +58,7 @@
         name="ISS_VERSION_TST"
         host = "build_VM_61"
         target="UEP_UTL_14_132_ISS"
-		timeout= "600"
+		timeout= "9600"
         iterations= "1"
          >
         <action>iss_version_test</action>	
@@ -83,20 +83,11 @@
       <session
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025_131"
 		ip= "172.16.14.131"
-		swupdate_filename= "swupdate_uep2025.raucb"
+		swupdate_filename= "tst_.swupdate_uep2025.raucb"
 		 >
         <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
 
-
-	 	<!-- ISS immideate upgrade from sftp server -->
-      <session
-        name="ISS_IMMIDEATE_UPGRADE_SFTP_TST"
-        protocol_ip= "sftp://root:devops123@172.16.15.61//mnt/80GB/opt/"
-        iterations="100"
-         >
-        <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
-     </session>
      
           <!-- ISS SW update & race condition with reboot test  -->
      <session
@@ -104,17 +95,13 @@
         host = "build_VM_61"
 		timeout= "9600"
         iterations= "1"
-        protocol_ip= "sftp://root:devops123@172.16.15.61//mnt/80GB/opt/"
         >
-        <thread_session target="UEP_UTL_14_132"
-	        start_time="500"
-	        end_time="530"         
+        <thread_session target="UEP_UTL_14_132" ip= "172.16.14.131"
+	        start_time="120"
+	        end_time="180"         
 	        >RANDOM_DELAY_REBOOT</thread_session>
-        <action target="UEP_UTL_14_132_ISS"
-        	timeout= "600"
-        	>iss_tftp_upgrade_immediate_activate_test</action>
-        <action target="UEP_UTL_14_132">alive_wait</action>
-        <session target="UEP_UTL_14_132_ISS">ISS_VERSION_TST</session>	
+        <session target="UEP_UTL_14_132_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025_131</session>	
+        <session target="UEP_UTL_14_132_ISS" ip="172.16.14.131" >ISS_VERSION_TST</session>	
      </session>       		
 </sessions_list>
 </root>

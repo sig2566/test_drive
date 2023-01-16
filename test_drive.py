@@ -120,6 +120,7 @@ class ExecTarget:
         self.stdin = None 
         self.stdout = None
         self.stderr= None
+        self.channel=paramiko.Channel
 
         
     def add_parent_class_callback(self, main_handler):
@@ -172,6 +173,7 @@ class ExecTarget:
         err_check= False
         pass_pattern = None
         final_pattern = None
+        timeout_action= None
         if 'chk' in xml_cmd.keys():
             err_check   = True 
         if 'pass' in xml_cmd.keys():
@@ -180,31 +182,48 @@ class ExecTarget:
         
         if 'final' in xml_cmd.keys():
             final_pattern= xml_cmd.get('final')
+            
+        if 'timeout_action' in xml_cmd.keys():
+            timeout_action=xml_cmd.get('timeout_action')
+            
         
-        return self.run_cmd(cmd_str, err_check, pass_pattern, finish_str= final_pattern)
+        return self.run_cmd(cmd_str, err_check, pass_pattern, finish_str= final_pattern, timeout_action= timeout_action)
         
-    def run_cmd(self, cmd, check_error=False, pass_pattern= None, finish_str= None):
+    def run_cmd(self, cmd, check_error=False, pass_pattern= None, finish_str= None, timeout_action = None):
         finish_tst_str = None
         CurrTestPassed = True
         print_log(cmd)
         if self.timeout_err == True:
             return
         cmd = cmd.strip('\n')
-        #for character in cmd:
-         #   self.stdin.write(character)
-          #  time.sleep(0.1)
-        self.stdin.write(cmd + '\n')
-        #self.stdin.write("\n")
+          
+        
+        # wait until channel is ready
+        # while not self.channel.recv_ready() :
+        #     print("NOT READY " + str(self.channel.recv_ready()) + "\n \n")
+        #     time.sleep(1)
+        if self.channel.closed:
+            return
+            
+        self.channel.send(cmd)
+        self.channel.send("\n")
+
+        # Wait a bit, if necessary
+        time.sleep(1)
         start_str= 'end of stdOUT buffer'
         if finish_str != None:
             finish_mark= re.compile(finish_str)
-        else:        
-            #Added new line to check that the previous command was ended    
+        else:
+             #Added new line to check that the previous command was ended                  
             finish_tst_str = start_str+'. finished with exit status'        
             echo_cmd = 'echo {} $?'.format(finish_tst_str)
-            self.stdin.write(echo_cmd + '\n')
-        #shin = self.stdin
-        self.stdin.flush()
+            if self.channel.closed:
+                return
+            self.channel.send(echo_cmd)
+            self.channel.send("\n")
+       
+        
+        #Check that the command was started
         p_cmd = re.compile(cmd)
         p_echo= re.compile('(echo)\s*'+start_str)
         shout = []
@@ -215,42 +234,76 @@ class ExecTarget:
         print_log("timeout_sec=" + str(timeout_sec))
         more_cont_str= "--More--"
         more_re= re.compile(more_cont_str)
+        cmd_fnished= False
+        last_line= ""
+        iter= 0
         try:
-            for line_dat in self.stdout:
-                line= str(line_dat)
-                line = line.strip('\n')
-                line = line.strip('\r')
-                if p_cmd.search(line):
-                    #print_log(line)
-                    # up for now filled with shell junk from stdin
-                    shout = []
-                elif p_echo.search(line):
-                    pass
-                elif (finish_tst_str!= None) and line.startswith(finish_tst_str):
-                    # our finish command ends with the exit status
-                    #exit_status = int(line.rsplit(maxsplit=1)[1])
-                    print_log(line)
-                    #if exit_status and check_error==True:
-                    if check_error==True:
-                        # stderr is combined with stdout.
-                        # thus, swap sherr with shout in a case of failure.
-                        sherr = self.stderr
-                        shout = []
-                    break
-                elif (finish_str != None) and finish_mark.search(line):
-                    print_log(line)
-                    break
-                elif more_re.search(line):
-                    self.stdin.write(" ")
-                    self.stdin.flush()
-                else:
-                    # get rid of 'coloring and formatting' special characters
-                    print_log(line)
-                    shout.append(line)
+            while not  self.channel.closed:
+                iter= iter+1
+                time.sleep(0.1)
+                while self.channel.recv_ready():
+                    iter= 0
+                    time.sleep(0.1)
+                    line_dat = self.channel.recv(5000)
+                    line_tmp= line_dat.decode("utf-8")
+                    lines = line_tmp.split('\n')
+                    num_lines= len(lines)
+                    lines[0] = last_line+lines[0]
+                    last_line= lines[num_lines-1]
+                    for i in range(num_lines):
+                        line= lines[i]
+                        if p_cmd.search(line):
+                            #print_log(line)
+                            # up for now filled with shell junk from stdin
+                            #print("p_cmd.search(line)")
+                            shout = []
+                        elif p_echo.search(line):
+                            #print("p_echo.search(line)")
+                            pass
+                        elif (finish_tst_str!= None) and line.startswith(finish_tst_str):
+                            # our finish command ends with the exit status
+                            #exit_status = int(line.rsplit(maxsplit=1)[1])
+                            #print_log(line)
+                            #if exit_status and check_error==True:
+                            cmd_fnished= True
+                            #print("startswith(finish_tst_str)")
+                            break 
+                        elif (finish_str != None) and finish_mark.search(line):
+                            print_log(line)
+                            cmd_fnished= True
+                            #print("finish_mark.search(line)")
+                            break 
+                        elif more_re.search(line):
+                            self.channel.send(" ")
+                            #print("more_re.search(line)")
+                        else:
+                            # get rid of 'coloring and formatting' special characters
+                            print_log(line)
+                            shout.append(line)
+                if cmd_fnished== True:
+                    #print("cmd_fnished== True")
+                    break        
+                if iter > 100:
+                    if timeout_action != None:
+                        if timeout_action == "exit":
+                            CurrTestPassed = False
+                            self.timeout_err = True                        
+                            break
+                        else:
+                            if timeout_action == "expption":
+                                signal.alarm(0)
+                            else:
+                                if timeout_action == "new_line":
+                                    iter=0
+                                    self.channel.sendall("\n")
+                                else:
+                                    break
+                    
+                
         except TimeoutError  as exc: 
                 print_log(exc)
-                self.stdin.write('\x03')
-                self.stdin.flush()
+                self.channel.sendall('\x03')
+                
                 # stderr is combined with stdout.
                 # thus, swap sherr with shout in a case of failure.
                 CurrTestPassed = False
@@ -272,9 +325,11 @@ class ExecTarget:
                 sherr.pop(0)
 
         
-        if len(sherr)!= 0:
+        if self.channel.recv_stderr_ready():
             print_log('Error:')
-            for err_str in sherr:
+            
+            while self.channel.recv_stderr_ready():
+                err_str = self.channel.recv_stderr(1000)
                 print_log(err_str)
             if check_error==True:
                 raise Exception(sherr)
@@ -305,15 +360,15 @@ class ExecTarget:
             
         #except paramiko.AuthenticationException, error:
         except:
-            print_log ("Incorrect password: "+self.passw)
+            print_log ("Exeption of ssh connection setup: "+ " UID=" + self.uid + " PSSW:" + self.passw + " IP:"+self.ip)
             raise
         # except socket.error, error:
         #     print_log(error)
         #    raise
-        channel = self.ssh_client.invoke_shell()
-        self.stdin = channel.makefile('ab') 
-        self.stdout = channel.makefile('r')
-        self.stderr= channel.makefile_stderr()
+        self.channel = self.ssh_client.invoke_shell()
+        self.stdin = self.channel.makefile('ab') 
+        self.stdout = self.channel.makefile('r')
+        self.stderr= self.channel.makefile_stderr()
 
         self.is_connected = True
         for cmd in self.prolog:
@@ -406,24 +461,29 @@ class MainHandler:
         if int(self.start_time)>= int(self.end_time):
             print_log("Sleep was failed. wrong start and stop times"+ self.start_time+ ' '+ self.end_time)
             return False
-        event = threading.Event()
-        print_log('start_time='+self.start_time + ' end_time='+self.end_time)
-        delay_time= uniform( int(self.start_time), int(self.end_time)  )
+        delay_time= uniform(int(self.start_time), int(self.end_time))
         print_log("Delay started for "+ str(delay_time) + ' sec')
-        event.wait(delay_time)
+        time.sleep(delay_time)
         print_log("Finish delay")
         return True   
           
     def TargetConfig(self):
-        exec_target  = copy.deepcopy(self.targets_dict[self.target])
-        if self.host != '':
-            self.exec_host= self.targets_dict[self.host]
-        for var_name  in self.__dict__.keys():
-            if var_name in exec_target.__dict__.keys():
-                exec_target.__dict__[var_name] = self.__dict__.get(var_name)
+        if self.host_switch== 'False' or self.host == '':
+            self.exec_target  = self.targets_dict[self.target]
+            if self.host != '':
+                self.exec_host= self.targets_dict[self.host]
+                
+        else:
+            #The treatment case, when executables and tests are located on host server and target 
+            #is mounted to the host server. In that case the host_switch allows running automatic
+            #data deployment on host and running tests on target
+            self.exec_target  = self.targets_dict[self.host]
+            if self.target!= '':
+                self.exec_host= self.targets_dict[self.target]
         
-        self.exec_target= exec_target
-        
+        for attrib in self.__dict__.keys():
+                if attrib in self.exec_target.__dict__.keys():
+                    self.exec_target.__dict__[attrib]= self.__dict__.get(attrib)
         
     def CommonSetup(self):
         print_log("self.host_switch="+self.host_switch)

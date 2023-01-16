@@ -45,6 +45,7 @@
 		>
 		<cmd> 'sleep ' + str((int(obj.iter_num)+1)*5) </cmd>
 		<cmd> "reboot " </cmd>
+		<cmd> 'exit' </cmd>
 	</action>   
 
  	<action
@@ -155,7 +156,14 @@
         >
         <session iterations= "1">SELECT_PARTITION</session>
         <session iterations= "2">LINUX_SW_UPDATE_TST</session>	
-     </session>    
+     </session>   
+     
+     <session
+        name="LINUX_SW_UPDATE_FULL_TST_UEP2025_131"
+        ip="172.16.14.131">
+        <session>LINUX_SW_UPDATE_FULL_TST</session>
+     </session> 
+      
 
      <!-- Linux SW update switch partitions test  -->
      <session
@@ -193,7 +201,7 @@
 		timeout= "9600"
         iterations= "1"
         >
-        <thread_action>random_delay</thread_action>
+        <action>random_delay</action>
         <action>immideate_reboot</action>
      </session>      
 </sessions_list>
