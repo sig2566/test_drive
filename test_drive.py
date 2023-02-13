@@ -121,6 +121,7 @@ class ExecTarget:
         self.stdout = None
         self.stderr= None
         self.channel=paramiko.Channel
+        self.disabled_algorithms=None
 
         
     def add_parent_class_callback(self, main_handler):
@@ -352,7 +353,8 @@ class ExecTarget:
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.timeout_err = False
         try:
-            self.ssh_client.connect(self.ip, port=self.port, username=self.uid, password=self.passw, timeout= float(main_handler.timeout))
+            self.ssh_client.connect(self.ip, port=self.port, username=self.uid, password=self.passw, 
+                                    timeout= float(main_handler.timeout), disabled_algorithms = self.disabled_algorithms)
             print_log( "Connected successfully. ip =" + self.ip + " user =" + self.uid+" Password = " + self.passw)
             ip_addr = self.ip;
             user_id = self.uid;

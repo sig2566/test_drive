@@ -13,10 +13,25 @@
     <prolog>
     	<cmd>'killall ISS.exe'</cmd>
     	<cmd>'cd /opt/uep/apps/'</cmd>
-    	<cmd final= "ISS login:" timeout_action="new_line">'./AppInit_nicISS'</cmd>
+    	<cmd final= "enos login:" timeout_action="new_line">'./AppInit_nicISS'</cmd>
     	<cmd final="Password:">'root'</cmd>
-    	<cmd final="ISS#">'admin123'</cmd>
+    	<cmd final="enos">'admin123'</cmd>
      </prolog>
+    <epilog>
+    </epilog> 
+  </target>
+  
+  
+  
+  <target
+    name="UEP_ENOS_MODE_ISS"
+	ip="172.16.14.132"
+    uid="root"
+    passw="admin123"
+    info="Test board in ENOS mode"
+    >
+    <prolog>
+    </prolog>
     <epilog>
     </epilog> 
   </target>
@@ -29,16 +44,16 @@
 		name= "iss_version_test"
 		func= "exec_cmdlist"
 		>
-		<cmd final= "ISS#" pass="Hardware Details.*Software Details"> 'show system information'</cmd>
+		<cmd final= "enos" pass="Hardware Details.*Software Details"> 'show system information'</cmd>
 	</action> 
 
   	<action
 		name= "iss_tftp_upgrade_immediate_activate_test"
 		func= "exec_cmdlist"
 		protocol_ip="tftp://172.16.15.61/"
-		bundle_name = "swupdate.raucb"
+		bundle_name = "swupdate_uep2025.raucb"
 		>
-		<cmd final= "ISS#" pass="Installing .* succeeded"
+		<cmd final= "enos" pass="Installing .* succeeded"
 		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
 		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
 		     > 'firmware activate immediate database migrate on'</cmd>		     
@@ -81,9 +96,9 @@
 
  	<!-- ISS immideate upgrade from tftp server -->
       <session
-        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025_131"
-		ip= "172.16.14.131"
-		swupdate_filename= "tst_.swupdate_uep2025.raucb"
+        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025"
+		ip= "172.16.15.186"
+		bundle_name = "swupdate_uep2025.raucb"
 		 >
         <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
@@ -94,14 +109,16 @@
         name="LINUX_SW_UPDATE_ISS_RACE_TST"
         host = "build_VM_61"
 		timeout= "9600"
+		bundle_name = "swupdate_uep2025.raucb"
         iterations= "1"
         >
-        <thread_session target="UEP_UTL_14_132" ip= "172.16.14.131"
+        <thread_session target="UEP_UTL_14_132" ip= "172.16.15.186"
 	        start_time="120"
 	        end_time="180"         
 	        >RANDOM_DELAY_REBOOT</thread_session>
-        <session target="UEP_UTL_14_132_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025_131</session>	
-        <session target="UEP_UTL_14_132_ISS" ip="172.16.14.131" >ISS_VERSION_TST</session>	
+	        
+        <session target="UEP_UTL_14_132_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
+        <session target="UEP_UTL_14_132_ISS" ip="172.16.15.186" >ISS_VERSION_TST</session>	
      </session>       		
 </sessions_list>
 </root>
