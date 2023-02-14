@@ -53,7 +53,7 @@
 
   <target
     name="build_VM_61"
-	ip="172.16.15.61"
+	ip="HOST_IP"
     uid="igors"
     passw="1q2w3e4r5t"
     info="IT target"    

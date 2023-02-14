@@ -16,6 +16,7 @@ from conda.common._logic import FALSE
 from Cython.Compiler.Naming import self_cname
 from networkx.generators import line
 from anaconda_project.internal.cli.environment_commands import lock
+from spyder.plugins.variableexplorer.widgets.objectexplorer import attribute_model
 print(sys.version)
 import time
 import re
@@ -424,6 +425,7 @@ class MainHandler:
         self.iter_num= 0
         self.start_time=0
         self.end_time=3
+        self.setups_dict= {}
         
        
         
@@ -619,8 +621,9 @@ class ThreadWrapper(Thread):
 #Defines general parser class
 class XML_handler:
     def __init__(self, test_handler):
-        #self.targets_dict= {}
+        self.targets_dict= {}
         self.actions_dict= {}
+        self.setups_dict= {}
         self.tree= []
         self.file_name = ''
         self.file_nameb= '.'
@@ -634,7 +637,45 @@ class XML_handler:
         self.file_name = file_name
         self.tree = ET.parse(self.file_name)
         self.root = self.tree.getroot()
-        
+    
+    def AddSetups(self, setups_root):
+        setups_list= setups_root.find('setups_list')
+        if setups_list== None:
+            return
+        for setup in setups_list:
+            setup_dict= {}
+            setup_name= setup.get('name')
+            if setup_name == None:
+                print_log('Error: Setup name does not exist ' + setup_name)
+                raise 
+            attrib_list= list(setup.findall('attrib'))
+            for child in attrib_list:
+                if child.tag != 'attrib':
+                    print_log('Wrong element in setup attribute element: '+ child.tag)
+                    raise
+                
+                if 'id' not in child.attrib.keys():
+                    print_log('Error: Attrib id is not exist in setup ' + setup_name)
+                    raise
+                
+                if 'new_val' not in child.keys():
+                    print_log('Error: Attrib new_val is not exist in setup ' + setup_name)
+                    raise 
+                
+                if 'val' in child.keys():
+                    key= child.attrib['id'] + '.' + child.attrib['val']
+                else:
+                    key= child.attrib['id']
+                
+                if key in setup_dict.keys():
+                    print_log('Error: Attrib was defined already ' + key)
+                    raise 
+                setup_dict[key] =  child.attrib['new_val']
+            if setup_name in self.test_handler.setups_dict.keys():
+                print_log('Error: Setup name was defined already ' + setup_name)
+                raise 
+            self.test_handler.setups_dict[setup_name] = setup_dict
+          
     def AddTargets(self, target_root):
         targets_list= target_root.find('targets_list')
         if targets_list== None:
@@ -686,6 +727,8 @@ class XML_handler:
     #Processing sessions 
     def SessoinParse(self, session_root):
         session_list=  session_root.find('sessions_list')
+        if session_list == None:
+            return
         for session in session_list.findall('session'):
             session_name= session.get('name')
             if session_name in self.session_dict.keys():
@@ -715,7 +758,31 @@ class XML_handler:
             return False
         return True
         
+    def  AttributeUpdate_with_setup(self, attrib, attrib_dict):
+        setup_name= attrib_dict['setup']
+        if setup_name == None:
+            return
+        if self.test_handler.setups_dict =={}:
+            return
         
+        setup= self.test_handler.setups_dict[setup_name]
+        if setup == None:
+            print_log('Error: The setup '+ setup_name + ' was not allocated')
+            raise 
+        
+        key= attrib
+        keyval= attrib+'.'+attrib_dict[attrib]
+        for tst_attr in setup.keys():
+            #Check if the attribute value should be replaced
+            if tst_attr == keyval:
+                print_log('Attr '+attrib+' replace value '+ attrib_dict[attrib] + ' with val '+setup[tst_attr])
+                attrib_dict[attrib]= setup[tst_attr]
+            else:
+                if tst_attr == key:
+                    print_log('Attr '+attrib+' replace value '+ attrib_dict[attrib] + ' with val '+setup[tst_attr])
+                    attrib_dict[attrib]= setup[tst_attr]
+        
+           
     def  ActionProcess(self,child, main_handler_orig, child_attrib_dict_tmp):
         global test_report_action
         print_log('Action name='+ child.text)
@@ -739,6 +806,7 @@ class XML_handler:
                 print_log('Warning: unused attribute: '+attrib)
            
             self.CheckAttrbUpDownOrder(attrib, child_attrib_dict_tmp[attrib])
+            self.AttributeUpdate_with_setup(attrib, child_attrib_dict_tmp)
             main_handler.__dict__[attrib] = child_attrib_dict_tmp[attrib]
         
         try:
@@ -856,6 +924,7 @@ class XML_handler:
         #Get targets
         tree = ET.parse(file)
         root = tree.getroot()
+        self.AddSetups(root)
         self.AddTargets(root)
         self.AddActions(root)
         self.SessoinParse(root)        
@@ -872,6 +941,7 @@ def test_processing(xml_handler):
     parser.add_argument('--config', required=True, nargs="*", help="List of test onfiguration files")
     parser.add_argument('--tst', required=True, nargs="*", help="Names of session from XML files to run")
     parser.add_argument('--rel_dir', default="/tmp/release", help="Path to the release directory")
+    parser.add_argument('--setup', default="", type=str, help="List of emails to send result")
     parser.add_argument('--email', nargs="*", type=str, help="List of emails to send result")
     
     x = sys.argv
@@ -882,6 +952,9 @@ def test_processing(xml_handler):
     attrib['rel_dir'] = args.rel_dir
     rel_dir_path  = args.rel_dir
     attrib['configlistToStr']= ' '.join(map(str, args.config)) 
+    if args.setup != "":
+        attrib['setup']= args.setup
+        
     res_file_name= "test_results.txt"
     result_file= open(res_file_name, 'w')
     session_cntr =0

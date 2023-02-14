@@ -24,17 +24,22 @@
   
   
   <target
-    name="UEP_ENOS_MODE_ISS"
-	ip="172.16.14.132"
-    uid="root"
-    passw="admin123"
-    info="Test board in ENOS mode"
+    name="UEP_TELNET_ISS"
+	ip="172.16.15.61"
+    uid="devops"
+    passw="devops123"
+    target_ip="172.16.15.186"
+    info="Test board in ENOS mode using telnet"
     >
     <prolog>
+ 	   <cmd final= "enos login:" timeout_action="new_line">'telnet '+ obj.target_ip</cmd>
+     	<cmd final="Password:">'root'</cmd>
+    	<cmd final="enos">'admin123'</cmd>  
     </prolog>
     <epilog>
     </epilog> 
   </target>
+  
   
  </targets_list> 
 
@@ -60,9 +65,21 @@
 			<cmd final="The system is going down for reboot NOW!"
 			>'Y'</cmd>
 	</action> 
-	
+<!--	
+   	<action
+		name= "enos_mode_set"
+		func= "exec_cmdlist"
+		target=
+		>
+		<cmd final= "enos" pass="Installing .* succeeded"
+		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
+		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
+		     > 'firmware activate immediate database migrate on'</cmd>		     
+			<cmd final="The system is going down for reboot NOW!"
+			>'Y'</cmd>
+	</action> 
  
-
+-->
 
 </actions_list>
 

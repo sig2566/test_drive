@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<root>
+<setups_list>
+<setup
+ name="BOARD_172.16.15.186"
+ >
+
+ <attrib
+  id="ip"
+  new_val="172.16.15.186"
+  />
+  <attrib
+  id="ip"
+  val="SERIAL_IP"
+  new_val="172.16.13.128"
+  />
+  <attrib
+  id="ip"
+  val="HOST_IP"
+  new_val="172.16.15.61"
+  />
+   
+  <attrib
+  id="bundle_name"
+  new_val="swupdate_uep2025.raucb"
+  />
+   
+ </setup>
+
+<setup
+ name="BOARD_172.16.14.132"
+ >
+
+ <attrib
+  id="ip"
+  new_val="172.16.14.132"
+  />
+  <attrib
+  id="ip"
+  val="SERIAL_IP"
+  new_val="172.16.13.60"
+ />
+  <attrib
+  id="ip"
+  val="HOST_IP"
+  new_val="172.16.15.61"
+  />
+  
+  <attrib
+  id="bundle_name"
+  new_val="swupdate_uep60.raucb"
+  />
+    
+ </setup>
+
+</setups_list>
+</root>

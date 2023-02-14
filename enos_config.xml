@@ -4,7 +4,7 @@
 
   <target
     name="UEP_UTL_14_132_SERIAL"
-	ip="172.16.13.60"
+	ip="SERIAL_IP"
     uid="root"
     passw="devops123"
     info="UTL test board"
