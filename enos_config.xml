@@ -84,6 +84,7 @@
         name="SELECT_PARTITION"
         host = "build_VM_61"
         target="UEP_UTL_14_132"
+        ip="172.16.14.132"
 		timeout= "9600"
         iterations= "1"
         bank="recovery.0"
@@ -101,6 +102,7 @@
         name="LINUX_SW_UPDATE_TST"
         host = "build_VM_61"
 		timeout= "9600"
+		ip="172.16.14.132"
         iterations= "3"
         >
         <action target="UEP_UTL_14_132">alive_wait</action>

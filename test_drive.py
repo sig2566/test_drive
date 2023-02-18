@@ -106,23 +106,24 @@ def error_chk_flex(test_res, success_pattern= 'FLEX PASSED'):
 
 class ExecTarget:
     def __init__(self):
-        self.ip = '0.0.0.0'
         self.prolog = []
         self.epilog = []
-        self.port = 22
         self.is_connected = False
         self.name = 'LocalTarget'
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.uid = 'swuser'
-        self.passw= 'sw_grp2'
-    #    self.obj = MainHandler()
+     #    self.obj = MainHandler()
         self.timeout_err = True
         self.stdin = None 
         self.stdout = None
         self.stderr= None
         self.channel=paramiko.Channel
-        self.disabled_algorithms=None
+        self.attrib_dict= {}
+        self.attrib_dict['port']= '22'
+        self.attrib_dict['ip']= '0.0.0.0'
+        self.attrib_dict['uid']='swuser'
+        self.attrib_dict['passw']='sw_grp2'
+        self.attrib_dict['disabled_algorithms']= ''
 
         
     def add_parent_class_callback(self, main_handler):
@@ -349,21 +350,22 @@ class ExecTarget:
         
     def open_connect(self, main_handler):
         global ip_addr,user_id 
+        obj= main_handler
         self.main_handler= main_handler
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.timeout_err = False
         try:
-            self.ssh_client.connect(self.ip, port=self.port, username=self.uid, password=self.passw, 
-                                    timeout= float(main_handler.timeout), disabled_algorithms = self.disabled_algorithms)
-            print_log( "Connected successfully. ip =" + self.ip + " user =" + self.uid+" Password = " + self.passw)
-            ip_addr = self.ip;
-            user_id = self.uid;
+            self.ssh_client.connect(obj.ip, port=obj.port, username=obj.uid, password=obj.passw, 
+                                    timeout= float(main_handler.timeout), disabled_algorithms = obj.disabled_algorithms)
+            print_log( "Connected successfully. ip =" + obj.ip + " user =" + obj.uid+" Password = " + obj.passw)
+            ip_addr = obj.ip;
+            user_id = obj.uid;
             
             
         #except paramiko.AuthenticationException, error:
         except:
-            print_log ("Exeption of ssh connection setup: "+ " UID=" + self.uid + " PSSW:" + self.passw + " IP:"+self.ip)
+            print_log ("Exeption of ssh connection setup: "+ " UID=" + obj.uid + " PSSW:" + obj.passw + " IP:"+obj.ip)
             raise
         # except socket.error, error:
         #     print_log(error)
@@ -563,7 +565,7 @@ class MainHandler:
         tic = time.perf_counter()
         self.TargetConfig()
         for i in range(120):
-            response = os.system("ping -c 1 " + self.exec_target.ip)
+            response = os.system("ping -c 1 " + self.ip)
             # and then check the response...        
             if response == 0:
                 print_log("Server alive")
@@ -685,9 +687,10 @@ class XML_handler:
                 print_log('Error: Target '+ target.get('name') + ' is allocated already')
                 raise
             exec_target=  copy.deepcopy(self.test_handler.exec_target)
+            #exec_target.__dict__['attrib_dict']= {}
             for var_name  in target.keys():
-                if var_name in exec_target.__dict__.keys():
-                    exec_target.__dict__[var_name] = target.get(var_name)
+                if var_name in exec_target.attrib_dict.keys():
+                    exec_target.attrib_dict[var_name] = target.get(var_name)
                 else:
                     print_log('Warning: Var name '+ var_name + ' is not existed in tatget exec object')
             for child in target:
@@ -785,6 +788,7 @@ class XML_handler:
            
     def  ActionProcess(self,child, main_handler_orig, child_attrib_dict_tmp):
         global test_report_action
+        final_attrib_dict= {}
         print_log('Action name='+ child.text)
         action= self.actions_dict[child.text]
         main_handler=  copy.deepcopy(main_handler_orig )
@@ -795,20 +799,32 @@ class XML_handler:
             raise
         for attrib in action.keys():
             #Check if the attribute is existed in the main_handler
-            if attrib not in main_handler.__dict__:
-                print_log('Warning: unused attribute: '+attrib)
-            self.CheckAttrbUpDownOrder(attrib, action.get(attrib))
-            main_handler.__dict__[attrib] = action.get(attrib)
+            if attrib not in final_attrib_dict.keys() or self.CheckAttrbUpDownOrder(attrib, action.get(attrib)):
+                final_attrib_dict[attrib] = action.get(attrib)
+            
         #Overwrite Action element attributes if necessary.
         for attrib in child_attrib_dict_tmp.keys():
             #Check if the attribute is existed in the main_handler
+           
+            if attrib not in final_attrib_dict.keys() or self.CheckAttrbUpDownOrder(attrib, child_attrib_dict_tmp[attrib]):
+                final_attrib_dict[attrib] = child_attrib_dict_tmp[attrib]
+                        
+        # Update target attributes
+        target_name= final_attrib_dict['target']
+        exec_target=self.test_handler.targets_dict[target_name]
+        main_handler.exec_target= exec_target
+        for attrib in exec_target.attrib_dict.keys():
+            if attrib not in final_attrib_dict.keys() or self.CheckAttrbUpDownOrder(attrib, main_handler.exec_target.attrib_dict[attrib])==False:
+                final_attrib_dict[attrib] = main_handler.exec_target.attrib_dict[attrib]
+
+        # Replace attribute values due to settings in setup elements
+        for attrib in final_attrib_dict.keys():
+            self.AttributeUpdate_with_setup(attrib, final_attrib_dict)
             if attrib not in main_handler.__dict__:
                 print_log('Warning: unused attribute: '+attrib)
-           
-            self.CheckAttrbUpDownOrder(attrib, child_attrib_dict_tmp[attrib])
-            self.AttributeUpdate_with_setup(attrib, child_attrib_dict_tmp)
-            main_handler.__dict__[attrib] = child_attrib_dict_tmp[attrib]
+            main_handler.__dict__[attrib] = final_attrib_dict[attrib]
         
+    
         try:
             func = action.get('func')
             main_handler.test_name= child.get('name')
@@ -822,6 +838,7 @@ class XML_handler:
                 print_log('Wrong cmd list tag '+ cmd.tag)
                 raise
             main_handler.cmd_list.append(cmd)
+            
         CurrTestPassed= func_call()
         #Check if test_descr attribute  is existed. If this attribute is existed then the test results should be saved
         test_res= "Failed"
@@ -851,17 +868,10 @@ class XML_handler:
         #Go through attributes and set them in the main_handler
         for attrib in session.keys():
             #Check if the attribute is existed in the main_handler
-            if attrib not in child_attrib_dict.keys():
+            if attrib not in child_attrib_dict.keys() or  self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib]):
                 child_attrib_dict[attrib] = session.get(attrib)
         
-        for attrib in child_attrib_dict.keys():
-            #Check if the attribute inheritance is in up to down orderr
-            if self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib])!= True:
-                if attrib in session.keys():
-                    child_attrib_dict[attrib] = session.get(attrib)
-                
-                self.__dict__[attrib] = child_attrib_dict[attrib]
-                #child_attrib_dict.pop(attrib)
+
         
         TotalTestRes = True     
         #Run the tests
