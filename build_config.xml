@@ -157,10 +157,12 @@
     <action
 		name= "alive_wait"
 		func= "ping_alive_test"
+		target="UEP_UTL_14_132"
 		>
 	</action>
  
      <action
+        target="UEP_UTL_14_132"
 		name= "random_delay"
 		func= "random_delay"
 		start_time= "20"

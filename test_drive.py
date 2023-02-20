@@ -12,7 +12,7 @@ import os
 import sys
 from gevent.libev.corecext import child
 from nose.plugins import attrib
-from conda.common._logic import FALSE
+from conda.common._logic import FALSE, TRUE
 from Cython.Compiler.Naming import self_cname
 from networkx.generators import line
 from anaconda_project.internal.cli.environment_commands import lock
@@ -52,7 +52,7 @@ import psutil
 
 #from _ast import Raise
 #Attributes, which are not transfered from up to down
-attribute_exception_list = ["iterations", "timeout"]
+attribute_exception_list = ["iterations", "timeout", "name"]
 
 # from sphinx.util.pycompat import sys_encoding
 # time.sleep(30)
@@ -195,6 +195,7 @@ class ExecTarget:
     def run_cmd(self, cmd, check_error=False, pass_pattern= None, finish_str= None, timeout_action = None):
         finish_tst_str = None
         CurrTestPassed = True
+        immideately_exit = False
         print_log(cmd)
         if self.timeout_err == True:
             return
@@ -210,12 +211,18 @@ class ExecTarget:
             
         self.channel.send(cmd)
         self.channel.send("\n")
+        shout = []
+        sherr = []
 
         # Wait a bit, if necessary
         time.sleep(1)
         start_str= 'end of stdOUT buffer'
         if finish_str != None:
-            finish_mark= re.compile(finish_str)
+            if finish_str =='.':
+                shout.append('Passed')
+                return shout
+            else:
+                finish_mark= re.compile(finish_str)
         else:
              #Added new line to check that the previous command was ended                  
             finish_tst_str = start_str+'. finished with exit status'        
@@ -229,8 +236,6 @@ class ExecTarget:
         #Check that the command was started
         p_cmd = re.compile(cmd)
         p_echo= re.compile('(echo)\s*'+start_str)
-        shout = []
-        sherr = []
         exit_status = 0
         timeout_sec= int(self.main_handler.timeout)
         signal.alarm(timeout_sec)
@@ -255,14 +260,9 @@ class ExecTarget:
                     last_line= lines[num_lines-1]
                     for i in range(num_lines):
                         line= lines[i]
-                        if p_cmd.search(line):
-                            #print_log(line)
-                            # up for now filled with shell junk from stdin
-                            #print("p_cmd.search(line)")
-                            shout = []
-                        elif p_echo.search(line):
-                            #print("p_echo.search(line)")
-                            pass
+                        if immideately_exit:
+                            cmd_fnished= True
+                            break
                         elif (finish_tst_str!= None) and line.startswith(finish_tst_str):
                             # our finish command ends with the exit status
                             #exit_status = int(line.rsplit(maxsplit=1)[1])
@@ -276,6 +276,14 @@ class ExecTarget:
                             cmd_fnished= True
                             #print("finish_mark.search(line)")
                             break 
+                        elif p_cmd.search(line):
+                            #print_log(line)
+                            # up for now filled with shell junk from stdin
+                            #print("p_cmd.search(line)")
+                            shout = []
+                        elif p_echo.search(line):
+                            #print("p_echo.search(line)")
+                            pass
                         elif more_re.search(line):
                             self.channel.send(" ")
                             #print("more_re.search(line)")
@@ -293,7 +301,7 @@ class ExecTarget:
                             self.timeout_err = True                        
                             break
                         else:
-                            if timeout_action == "expption":
+                            if timeout_action == "exception":
                                 signal.alarm(0)
                             else:
                                 if timeout_action == "new_line":
@@ -304,17 +312,21 @@ class ExecTarget:
                     
                 
         except TimeoutError  as exc: 
-                print_log(exc)
-                self.channel.sendall('\x03')
-                
-                # stderr is combined with stdout.
-                # thus, swap sherr with shout in a case of failure.
-                CurrTestPassed = False
-                sherr = shout
-                self.timeout_err = True
-                shout = []
-        finally:
+            print_log('TimeoutError')
+            self.channel.sendall('\x03')
+            
+            # stderr is combined with stdout.
+            # thus, swap sherr with shout in a case of failure.
+            CurrTestPassed = False
+            sherr = shout
+            self.timeout_err = True
+            shout = []
             signal.alarm(0)
+        except UnicodeDecodeError as exc:
+            print_log("Exit due to input data exception")
+            shout.append('Passed')
+            return
+            
 
         # first and last lines of shout/sherr contain a prompt
         if finish_tst_str!= None:
@@ -689,10 +701,9 @@ class XML_handler:
             exec_target=  copy.deepcopy(self.test_handler.exec_target)
             #exec_target.__dict__['attrib_dict']= {}
             for var_name  in target.keys():
-                if var_name in exec_target.attrib_dict.keys():
-                    exec_target.attrib_dict[var_name] = target.get(var_name)
-                else:
+                if var_name not in exec_target.attrib_dict.keys():
                     print_log('Warning: Var name '+ var_name + ' is not existed in tatget exec object')
+                exec_target.attrib_dict[var_name] = target.get(var_name)
             for child in target:
                 if child.tag == 'prolog':
                     for cmd in child:
@@ -762,6 +773,8 @@ class XML_handler:
         return True
         
     def  AttributeUpdate_with_setup(self, attrib, attrib_dict):
+        if 'setup' not in attrib_dict.keys():
+            return
         setup_name= attrib_dict['setup']
         if setup_name == None:
             return
@@ -810,12 +823,15 @@ class XML_handler:
                 final_attrib_dict[attrib] = child_attrib_dict_tmp[attrib]
                         
         # Update target attributes
-        target_name= final_attrib_dict['target']
-        exec_target=self.test_handler.targets_dict[target_name]
-        main_handler.exec_target= exec_target
-        for attrib in exec_target.attrib_dict.keys():
-            if attrib not in final_attrib_dict.keys() or self.CheckAttrbUpDownOrder(attrib, main_handler.exec_target.attrib_dict[attrib])==False:
-                final_attrib_dict[attrib] = main_handler.exec_target.attrib_dict[attrib]
+        
+        if "target" in final_attrib_dict.keys():
+            target_name= final_attrib_dict['target']
+            exec_target=self.test_handler.targets_dict[target_name]
+            main_handler.exec_target= exec_target
+        
+            for attrib in exec_target.attrib_dict.keys():
+                if attrib not in final_attrib_dict.keys() or self.CheckAttrbUpDownOrder(attrib, main_handler.exec_target.attrib_dict[attrib])==False:
+                    final_attrib_dict[attrib] = main_handler.exec_target.attrib_dict[attrib]
 
         # Replace attribute values due to settings in setup elements
         for attrib in final_attrib_dict.keys():
@@ -868,10 +884,8 @@ class XML_handler:
         #Go through attributes and set them in the main_handler
         for attrib in session.keys():
             #Check if the attribute is existed in the main_handler
-            if attrib not in child_attrib_dict.keys() or  self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib]):
+            if attrib not in child_attrib_dict.keys() or  self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib])==False:
                 child_attrib_dict[attrib] = session.get(attrib)
-        
-
         
         TotalTestRes = True     
         #Run the tests

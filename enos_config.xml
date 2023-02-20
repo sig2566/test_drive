@@ -3,7 +3,7 @@
 <targets_list>
 
   <target
-    name="UEP_UTL_14_132_SERIAL"
+    name="UEP_SERIAL"
 	ip="SERIAL_IP"
     uid="root"
     passw="devops123"
@@ -11,8 +11,9 @@
     >
     <prolog>
     	<cmd>'killall -9 minicom'</cmd>
-    	<cmd>'minicom'</cmd>
-    	<cmd>'root'</cmd>
+    	<cmd final=".">'minicom'</cmd>
+    	<cmd final="login:" timeout_action="new_line">'exit'</cmd>
+    	<cmd final ="Password:">'root'</cmd>
     	<cmd>'root'</cmd>
      </prolog>
     <epilog>

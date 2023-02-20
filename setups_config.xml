@@ -19,7 +19,18 @@
   val="HOST_IP"
   new_val="172.16.15.61"
   />
-   
+  />
+  <attrib
+  id="ip"
+  val="build_VM_61"
+  new_val="172.16.15.61"
+  />
+  <attrib
+  id="target_ip"
+  val="TARGET_IP"
+  new_val="172.16.15.186"
+  />
+  
   <attrib
   id="bundle_name"
   new_val="swupdate_uep2025.raucb"

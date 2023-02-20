@@ -15,7 +15,7 @@
     	<cmd>'cd /opt/uep/apps/'</cmd>
     	<cmd final= "enos login:" timeout_action="new_line">'./AppInit_nicISS'</cmd>
     	<cmd final="Password:">'root'</cmd>
-    	<cmd final="enos">'admin123'</cmd>
+    	<cmd final=".">'admin123'</cmd>
      </prolog>
     <epilog>
     </epilog> 
@@ -25,16 +25,16 @@
   
   <target
     name="UEP_TELNET_ISS"
-	ip="172.16.15.61"
+	ip="HOST_IP"
     uid="devops"
     passw="devops123"
-    target_ip="172.16.15.186"
+    target_ip="TARGET_IP"
     info="Test board in ENOS mode using telnet"
     >
     <prolog>
- 	   <cmd final= "enos login:" timeout_action="new_line">'telnet '+ obj.target_ip</cmd>
-     	<cmd final="Password:">'root'</cmd>
-    	<cmd final="enos">'admin123'</cmd>  
+ 	   <cmd final= "login:" timeout_action="new_line">'telnet '+ obj.target_ip</cmd>
+     	<cmd final="Password:" timeout_action="new_line">'root'</cmd>
+    	<cmd final=".">'admin123'</cmd>  
     </prolog>
     <epilog>
     </epilog> 
@@ -49,7 +49,7 @@
 		name= "iss_version_test"
 		func= "exec_cmdlist"
 		>
-		<cmd final= "enos" pass="Hardware Details.*Software Details"> 'show system information'</cmd>
+		<cmd final= "enos|ISS" pass="Hardware Details.*Software Details"> 'show system information'</cmd>
 	</action> 
 
   	<action
@@ -58,28 +58,37 @@
 		protocol_ip="tftp://172.16.15.61/"
 		bundle_name = "swupdate_uep2025.raucb"
 		>
-		<cmd final= "enos" pass="Installing .* succeeded"
+		<cmd final= "enos|ISS" pass="Installing .* succeeded" timeout_action="new_line"
 		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
 		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
-		     > 'firmware activate immediate database migrate on'</cmd>		     
-			<cmd final="The system is going down for reboot NOW!"
+		     >'firmware activate immediate database migrate on'</cmd>		     
+			<cmd final="Firmware activate initiated"
 			>'Y'</cmd>
 	</action> 
-<!--	
+	
    	<action
-		name= "enos_mode_set"
+		name= "devel_mode_set"
 		func= "exec_cmdlist"
-		target=
+		target="UEP_SERIAL"
 		>
-		<cmd final= "enos" pass="Installing .* succeeded"
-		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
-		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
-		     > 'firmware activate immediate database migrate on'</cmd>		     
-			<cmd final="The system is going down for reboot NOW!"
-			>'Y'</cmd>
+		<cmd chk= "True" >'cd /opt/uep/apps'</cmd>
+		<cmd final=".">'rm ENOS_MODE'</cmd>		     
+		<cmd final=".">'rm ISS_RECOVERY'</cmd>
+		<cmd final=".">'reboot ; exit'</cmd>
+	</action> 
+ 	
+   	<action
+		name= "work_mode_set"
+		func= "exec_cmdlist"
+		target="UEP_SERIAL"
+		>
+		<cmd chk= "True" > 'cd /opt/uep/apps'</cmd>
+		<cmd final="." > 'touch ENOS_MODE'</cmd>		     
+		<cmd final=".">'touch ISS_RECOVERY'</cmd>
+		<cmd final="."> 'reboot ; exit' </cmd>
 	</action> 
  
--->
+ 
 
 </actions_list>
 
@@ -107,7 +116,11 @@
         sw_update_file="swupdate_utl.rauc"
          >
         <action>iss_tftp_upgrade_immediate_activate_test</action>
-        <action>alive_wait</action>		
+        <action>alive_wait</action>	
+        <action
+          start_time= "180"
+		  end_time="190"        
+        >random_delay</action>
         <session>ISS_VERSION_TST</session>
      </session>    
 
@@ -129,13 +142,39 @@
 		bundle_name = "swupdate_uep2025.raucb"
         iterations= "1"
         >
-        <thread_session target="UEP_UTL_14_132" ip= "172.16.15.186"
+         <action>devel_mode_set</action>
+		 <action>alive_wait</action>			 	        
+
+        <thread_session target="UEP_UTL_14_132"
 	        start_time="120"
 	        end_time="180"         
 	        >RANDOM_DELAY_REBOOT</thread_session>
-	        
         <session target="UEP_UTL_14_132_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
         <session target="UEP_UTL_14_132_ISS" ip="172.16.15.186" >ISS_VERSION_TST</session>	
-     </session>       		
+     </session>
+     
+   	<!-- ISS immideate upgrade from tftp server in development mode-->
+      <session
+        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_DEV"
+		 >
+		 <action>devel_mode_set</action>
+		 <action>alive_wait</action>	
+        <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+    </session>    
+            		
+    	<!-- ISS immideate upgrade from tftp server in ENOS + recovery mode-->
+      <session
+        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_WORK"
+		 >
+		 <action>work_mode_set</action>
+		 <action>alive_wait</action>
+		         <action
+          start_time= "180"
+		  end_time="190"        
+        >random_delay</action>
+        <session target="UEP_TELNET_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+    </session>    
+            		
+ 
 </sessions_list>
 </root>
