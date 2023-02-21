@@ -170,7 +170,7 @@ class ExecTarget:
         if 'record_name' in xml_cmd.keys():
             obj.test_descr= eval(xml_cmd.text)
             return
-        
+        action_delay= 1 #Default wait for action 1 sec
         cmd_str= eval(xml_cmd.text)
         print_log("cmd_str="+cmd_str)
         err_check= False
@@ -189,10 +189,13 @@ class ExecTarget:
         if 'timeout_action' in xml_cmd.keys():
             timeout_action=xml_cmd.get('timeout_action')
             
+        if 'action_delay' in xml_cmd.keys():
+            action_delay= int(xml_cmd.get('action_delay'))
+            
         
-        return self.run_cmd(cmd_str, err_check, pass_pattern, finish_str= final_pattern, timeout_action= timeout_action)
+        return self.run_cmd(cmd_str, err_check, pass_pattern, finish_str= final_pattern, timeout_action= timeout_action, action_delay= action_delay)
         
-    def run_cmd(self, cmd, check_error=False, pass_pattern= None, finish_str= None, timeout_action = None):
+    def run_cmd(self, cmd, check_error=False, pass_pattern= None, finish_str= None, timeout_action = None, action_delay= 1):
         finish_tst_str = None
         CurrTestPassed = True
         immideately_exit = False
@@ -201,7 +204,7 @@ class ExecTarget:
             return
         cmd = cmd.strip('\n')
           
-        
+        action_delay_num = action_delay* 10
         # wait until channel is ready
         # while not self.channel.recv_ready() :
         #     print("NOT READY " + str(self.channel.recv_ready()) + "\n \n")
@@ -259,8 +262,14 @@ class ExecTarget:
                     lines[0] = last_line+lines[0]
                     last_line= lines[num_lines-1]
                     for i in range(num_lines):
-                        line= lines[i]
-                        if immideately_exit:
+                        line= lines[i]                        
+                        if p_cmd.search(line):
+                            #Not treat the line with the command
+                            #print_log(line)
+                            # up for now filled with shell junk from stdin
+                            #print("p_cmd.search(line)")
+                            shout = []                     
+                        elif immideately_exit:
                             cmd_fnished= True
                             break
                         elif (finish_tst_str!= None) and line.startswith(finish_tst_str):
@@ -276,11 +285,6 @@ class ExecTarget:
                             cmd_fnished= True
                             #print("finish_mark.search(line)")
                             break 
-                        elif p_cmd.search(line):
-                            #print_log(line)
-                            # up for now filled with shell junk from stdin
-                            #print("p_cmd.search(line)")
-                            shout = []
                         elif p_echo.search(line):
                             #print("p_echo.search(line)")
                             pass
@@ -294,7 +298,7 @@ class ExecTarget:
                 if cmd_fnished== True:
                     #print("cmd_fnished== True")
                     break        
-                if iter > 100:
+                if iter > action_delay_num:
                     if timeout_action != None:
                         if timeout_action == "exit":
                             CurrTestPassed = False
@@ -325,7 +329,7 @@ class ExecTarget:
         except UnicodeDecodeError as exc:
             print_log("Exit due to input data exception")
             shout.append('Passed')
-            return
+            return shout
             
 
         # first and last lines of shout/sherr contain a prompt
@@ -377,7 +381,7 @@ class ExecTarget:
             
         #except paramiko.AuthenticationException, error:
         except:
-            print_log ("Exeption of ssh connection setup: "+ " UID=" + obj.uid + " PSSW:" + obj.passw + " IP:"+obj.ip)
+            print_log ("Exeption of ssh connection setup: "+ " UID=" + obj.uid + " PSSW:" + obj.passw + " IP:"+obj.ip+ ' port:'+obj.port)
             raise
         # except socket.error, error:
         #     print_log(error)
@@ -390,6 +394,7 @@ class ExecTarget:
         self.is_connected = True
         for cmd in self.prolog:
             res = self.XMLcmd2cmd(cmd)
+            
             #print_log('\n'.join(res))
         
 
@@ -600,7 +605,8 @@ class MainHandler:
         print_log("Run commands by list")        
         self.CommonSetup()
         for cmd in self.cmd_list:
-            self.exec_target.XMLcmd2cmd(cmd)
+            res= self.exec_target.XMLcmd2cmd(cmd)
+
         self.exec_target.close_connection()
         return True   
         

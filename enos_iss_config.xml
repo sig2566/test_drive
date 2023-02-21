@@ -58,7 +58,7 @@
 		protocol_ip="tftp://172.16.15.61/"
 		bundle_name = "swupdate_uep2025.raucb"
 		>
-		<cmd final= "enos|ISS" pass="Installing .* succeeded" timeout_action="new_line"
+		<cmd final= "#######" pass="Installing .* succeeded" timeout_action="exit" action_delay= "120" 
 		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
 		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
 		     >'firmware activate immediate database migrate on'</cmd>		     
@@ -127,8 +127,6 @@
  	<!-- ISS immideate upgrade from tftp server -->
       <session
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025"
-		ip= "172.16.15.186"
-		bundle_name = "swupdate_uep2025.raucb"
 		 >
         <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
@@ -136,7 +134,7 @@
      
           <!-- ISS SW update & race condition with reboot test  -->
      <session
-        name="LINUX_SW_UPDATE_ISS_RACE_TST"
+        name="LINUX_SW_UPDATE_ISS_RACE_TST_DEVEL"
         host = "build_VM_61"
 		timeout= "9600"
 		bundle_name = "swupdate_uep2025.raucb"
@@ -146,19 +144,44 @@
 		 <action>alive_wait</action>			 	        
 
         <thread_session target="UEP_UTL_14_132"
-	        start_time="120"
-	        end_time="180"         
+	        start_time="100"
+	        end_time="120"         
 	        >RANDOM_DELAY_REBOOT</thread_session>
         <session target="UEP_UTL_14_132_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
-        <session target="UEP_UTL_14_132_ISS" ip="172.16.15.186" >ISS_VERSION_TST</session>	
+        <session target="UEP_UTL_14_132_ISS"  >ISS_VERSION_TST</session>	
      </session>
-     
+   
+          <!-- ISS SW update & race condition with reboot test  -->
+     <session
+        name="LINUX_SW_UPDATE_ISS_RACE_TST_WORK"
+ 		timeout= "9600"
+		bundle_name = "swupdate_uep2025.raucb"
+        iterations= "1"
+        >
+		 <action>work_mode_set</action>
+		 <action>alive_wait</action>
+		         <action
+          start_time= "180"
+		  end_time="190"        
+        >random_delay</action>
+        
+        <thread_session target="UEP_UTL_14_132" 
+	        start_time="100"
+	        end_time="120" port ="2222"        
+	        >RANDOM_DELAY_REBOOT</thread_session>
+	       
+        <session target="UEP_TELNET_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
+        <session target="UEP_TELNET_ISS"  >ISS_VERSION_TST</session>	
+     </session>
+  
    	<!-- ISS immideate upgrade from tftp server in development mode-->
       <session
-        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_DEV"
+        name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_DEV" 
 		 >
+		 <!--
 		 <action>devel_mode_set</action>
 		 <action>alive_wait</action>	
+		 -->
         <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
             		
