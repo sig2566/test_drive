@@ -842,8 +842,8 @@ class XML_handler:
         # Replace attribute values due to settings in setup elements
         for attrib in final_attrib_dict.keys():
             self.AttributeUpdate_with_setup(attrib, final_attrib_dict)
-            if attrib not in main_handler.__dict__:
-                print_log('Warning: unused attribute: '+attrib)
+            #if attrib not in main_handler.__dict__:
+            #    print_log('Warning: unused attribute: '+attrib)
             main_handler.__dict__[attrib] = final_attrib_dict[attrib]
         
     
@@ -886,6 +886,7 @@ class XML_handler:
         if session == None:
             print_log('Unallocated session name ' + session_name)
             raise
+        
         child_attrib_dict= dict(attrib_dict)  
         #Go through attributes and set them in the main_handler
         for attrib in session.keys():
@@ -895,7 +896,11 @@ class XML_handler:
         
         TotalTestRes = True     
         #Run the tests
-        iterations= self.iterations
+        if 'iterations' in session.keys():
+            iterations= session.get('iterations')
+        else:
+            iterations= 1
+        
         for iter_num in range(int(iterations)):
             for child in session:
                 #Add attributes if they were not added before

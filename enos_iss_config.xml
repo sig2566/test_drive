@@ -59,7 +59,7 @@
 		bundle_name = "swupdate_uep2025.raucb"
 		>
 		<cmd final= "#######" pass="Installing .* succeeded" timeout_action="exit" action_delay= "120" 
-		> 'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
+		>'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
 		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
 		     >'firmware activate immediate database migrate on'</cmd>		     
 			<cmd final="Firmware activate initiated"
@@ -156,7 +156,7 @@
         name="LINUX_SW_UPDATE_ISS_RACE_TST_WORK"
  		timeout= "9600"
 		bundle_name = "swupdate_uep2025.raucb"
-        iterations= "1"
+        iterations= "10"
         >
 		 <action>work_mode_set</action>
 		 <action>alive_wait</action>
@@ -178,10 +178,9 @@
       <session
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_DEV" 
 		 >
-		 <!--
+		 
 		 <action>devel_mode_set</action>
 		 <action>alive_wait</action>	
-		 -->
         <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
             		
@@ -195,9 +194,19 @@
           start_time= "180"
 		  end_time="190"        
         >random_delay</action>
-        <session target="UEP_TELNET_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+        <session target="UEP_TELNET_ISS" iteractions="10" >ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
-            		
+     
+    <!-- ISS compined test -->
+    <session name="ISS_COMBINED_UPDATE_TEST"
+     iterations="20"
+     >
+     <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST_WORK</session>
+     <session>LINUX_SW_UPDATE_ISS_RACE_TST_WORK</session> 
+    <!--  <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST_DEV</session>
+     <session>LINUX_SW_UPDATE_ISS_RACE_TST_DEVEL</session> -->
+     </session> 
+        		
  
 </sessions_list>
 </root>
