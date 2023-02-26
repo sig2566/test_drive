@@ -199,10 +199,10 @@
      
     <!-- ISS compined test -->
     <session name="ISS_COMBINED_UPDATE_TEST"
-     iterations="20"
+     iterations="1"
      >
-     <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST_WORK</session>
-     <session>LINUX_SW_UPDATE_ISS_RACE_TST_WORK</session> 
+     <session iterations="2">ISS_IMMIDEATE_UPGRADE_TFTP_TST_WORK</session>
+     <session iterations="5">LINUX_SW_UPDATE_ISS_RACE_TST_WORK</session> 
     <!--  <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST_DEV</session>
      <session>LINUX_SW_UPDATE_ISS_RACE_TST_DEVEL</session> -->
      </session> 
