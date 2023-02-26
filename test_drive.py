@@ -69,7 +69,7 @@ def print_log(log_str=""):
     thread_name= threading.currentThread().getName()
     timestamp= str(time.time())
     out_str= timestamp + "\t" + thread_name+"\t" + log_str  
-    print(out_str)
+    print(out_str, end ="\n")
     lock_print.release()
       
 TestPassed= True
@@ -625,7 +625,7 @@ class ThreadWrapper(Thread):
         print_log("Start new thread")
         if self.child.tag == 'thread_session':
             #child, main_handler_orig, child_attrib_dict_tmp    
-            self.result= self.xml_handler.SessionProcess(session_name= self.child.text, main_handler_orig= self.test_handler, attrib_dict= self.attrib, new_thread= True)
+            self.result= self.xml_handler.SessionProcess(cover_session= self.child, main_handler_orig= self.test_handler, attrib_dict= self.attrib, new_thread= True)
         elif self.child.tag == 'thread_action':
             self.child.tag = "action"
             #session_name, main_handler_orig, attrib_dict
@@ -759,9 +759,13 @@ class XML_handler:
                 
     def SessionProcessList(self, session_name_list, main_handler, attrib_dict):
         signal.signal(signal.SIGALRM, handler)
+        cover_session = {}
+        
         for session_name in session_name_list:
             print_log('Processing test:'+session_name)
-            self.SessionProcess(session_name,main_handler, attrib_dict)   
+            cover_session = ET.Element("session")
+            cover_session.text = session_name
+            self.SessionProcess(cover_session, main_handler, attrib_dict)   
 
     def CheckAttrbUpDownOrder(self, key, val):
         mode = ['debug', 'release']
@@ -805,26 +809,33 @@ class XML_handler:
                     attrib_dict[attrib]= setup[tst_attr]
         
            
-    def  ActionProcess(self,child, main_handler_orig, child_attrib_dict_tmp):
+    def  ActionProcess(self,cover_action, main_handler_orig, child_attrib_dict_tmp):
         global test_report_action
         final_attrib_dict= {}
-        print_log('Action name='+ child.text)
-        action= self.actions_dict[child.text]
+        print_log('Action name='+ cover_action.text)
+        if cover_action.text not in self.actions_dict.keys():
+            print_log("The action element is not in actions_dict")
+            raise 
+        
+        action= copy.deepcopy(self.actions_dict[cover_action.text])
         main_handler=  copy.deepcopy(main_handler_orig )
-        test_report_action = child.text
+        test_report_action = cover_action.text
         CurrTestPassed = True
         if action == None:
-            print_log('Action: '+ child.text + ' did not found in actions list')
+            print_log('Action: '+ cover_action.text + ' did not found in actions list')
             raise
+       
         for attrib in action.keys():
-            #Check if the attribute is existed in the main_handler
-            if attrib not in final_attrib_dict.keys() or self.CheckAttrbUpDownOrder(attrib, action.get(attrib)):
-                final_attrib_dict[attrib] = action.get(attrib)
+            #Copy the action attributes into final_attrib_dict
+            final_attrib_dict[attrib] = action.get(attrib)
+            
+        for attrib in cover_action.keys():
+            final_attrib_dict[attrib] = cover_action.get(attrib)
+            
             
         #Overwrite Action element attributes if necessary.
         for attrib in child_attrib_dict_tmp.keys():
-            #Check if the attribute is existed in the main_handler
-           
+            #Check if the attribute is existed in the main_handler           
             if attrib not in final_attrib_dict.keys() or self.CheckAttrbUpDownOrder(attrib, child_attrib_dict_tmp[attrib]):
                 final_attrib_dict[attrib] = child_attrib_dict_tmp[attrib]
                         
@@ -849,7 +860,7 @@ class XML_handler:
     
         try:
             func = action.get('func')
-            main_handler.test_name= child.get('name')
+            main_handler.test_name= action.get('name')
             func_call = getattr(main_handler, func)
         except AttributeError:
             print_log('Error function name '+ func)
@@ -867,7 +878,7 @@ class XML_handler:
         if CurrTestPassed == True:
             test_res= "Passed"
 
-        print_log(child.text +': ' + test_res)
+        print_log(action.text +': ' + test_res)
      #   if hasattr(main_handler, "test_descr"):
      #       result_file.write(main_handler.test_descr+ ': ' + test_res + '\n')
      #       result_file.flush()
@@ -875,50 +886,56 @@ class XML_handler:
         
         
                                     
-    def     SessionProcess(self, session_name, main_handler_orig, attrib_dict= {}, new_thread= False):    
-        TestPassed = True
-        print_log()                     
-        print_log('Execute session ' + session_name)
-        print_log('Attrib_dict: '+ str(attrib_dict.keys()))
+    def     SessionProcess(self, cover_session, main_handler_orig, attrib_dict= {}, new_thread= False):    
+        TestPassed = True                
         main_handler=  copy.deepcopy(main_handler_orig )
         threads= []
-        session= self.session_dict.get(session_name)
-        if session == None:
-            print_log('Unallocated session name ' + session_name)
+        session_attr= {}
+        child_attrib_dict= dict(attrib_dict) 
+        if cover_session.text not in self.session_dict.keys():
+            print_log('Unallocated session name ' + cover_session.text)
             raise
         
-        child_attrib_dict= dict(attrib_dict)  
-        #Go through attributes and set them in the main_handler
+        session= copy.deepcopy(self.session_dict.get(cover_session.text))
+        #Combine attributes of the session with attributes of the cover session
         for attrib in session.keys():
+            session_attr[attrib] = session.get(attrib)
+            
+        for attrib in cover_session.keys():
+            session_attr[attrib]= cover_session.get(attrib)
+            
+        print_log('Execute session ' + session.tag)
+        print_log('Attrib_dict: '+ str(attrib_dict.keys()))
+        print_log('Session_dic: '+ str(session_attr.keys()))
+         
+        #Go through attributes and set them in the main_handler
+        for attrib in session_attr.keys():
             #Check if the attribute is existed in the main_handler
             if attrib not in child_attrib_dict.keys() or  self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib])==False:
-                child_attrib_dict[attrib] = session.get(attrib)
+                child_attrib_dict[attrib] = session_attr.get(attrib)
         
         TotalTestRes = True     
         #Run the tests
-        if 'iterations' in session.keys():
-            iterations= session.get('iterations')
+        if 'iterations' in session_attr.keys():
+            iterations= session_attr.get('iterations')
         else:
             iterations= 1
         
         for iter_num in range(int(iterations)):
+            print_log('Session ' + cover_session.text + ' Start iteration ' + str(iter_num) + ' from ' +  str(iterations) + ' iterations')
             for child in session:
                 #Add attributes if they were not added before
                 child_attrib_dict_tmp = dict(child_attrib_dict)
                 #send number of current iterations to child
                 child_attrib_dict_tmp['iter_num']= str(iter_num)
-                for attrib in child.keys():
-                    if attrib not in child_attrib_dict_tmp.keys():
-                        child_attrib_dict_tmp[attrib] = child.get(attrib)
-                    elif self.CheckAttrbUpDownOrder(attrib, child_attrib_dict[attrib])!= True:
-                        child_attrib_dict_tmp[attrib] = child.get(attrib)
+                
                 if new_thread==True:
                     if child.tag == 'thread_session':
                         child.tag= 'session'
                     if child.tag == 'thread_action':
                         child.tag = 'action'
                 if child.tag == 'session':
-                    TestPassed = self.SessionProcess(child.text, main_handler, child_attrib_dict_tmp)
+                    TestPassed = self.SessionProcess(child , main_handler, child_attrib_dict_tmp)
                 elif child.tag == 'action':
                     TestPassed = self.ActionProcess(child, main_handler, child_attrib_dict_tmp)
                 elif child.tag == 'thread_session' or child.tag == 'thread_action':
@@ -939,8 +956,8 @@ class XML_handler:
                 TestPassed= t.join()
                 TotalTestRes = TotalTestRes and TestPassed
             threads= []
-            print_log('Finish iteration ' + str(iter_num) + ' from ' +  str(iterations) + ' iterations')
-        print_log('Finish executing session ' + session_name )
+            print_log('Session ' + cover_session.text + ' Finish iteration ' + str(iter_num) + ' from ' +  str(iterations) + ' iterations')
+        print_log('Finish executing session ' + cover_session.text )
                     
         if TotalTestRes== True:
             print_log('Automation test passed')
