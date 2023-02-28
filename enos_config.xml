@@ -30,12 +30,15 @@
 	<action
 		func= "rauc_swupdate_test_action"
 		name= "rauc_swupdate_test_action"
+		target= "UEP_BOARD"
+		ip="HOST_IP"
 		>
 	</action>
 
 	<action
 		func= "rauc_sw_update_install"
 		name= "rauc_sw_update_install"
+		target= "UEP_BOARD"
 		>
 	</action>
 
@@ -43,10 +46,10 @@
  	<action
 		name= "immideate_reboot"
 		func= "exec_cmdlist"
+		target= "UEP_BOARD"
 		>
 		<cmd> 'sleep ' + str((int(obj.iter_num)+1)*5) </cmd>
-		<cmd> "reboot " </cmd>
-		<cmd> 'exit' </cmd>
+		<cmd final="."> "reboot;exit " </cmd>
 	</action>   
 
  	<action
@@ -58,14 +61,16 @@
  	<action
 		name= "select_partition"
 		func= "exec_cmdlist"
+		target="UEP_SERIAL"
 		>
 		<cmd> 'rauc status mark-active ' + obj.bank </cmd>
-		<cmd> 'reboot ; exit' </cmd>
+		<cmd final="."> 'reboot ; exit' </cmd>
 	</action> 
 	
 	<action
 		func= "sw_update_upload"
 		name= "sw_update_upload"
+		target= "UEP_BOARD"
 		>
 	</action>
 	
@@ -83,17 +88,13 @@
      <!-- Select partition  -->
      <session
         name="SELECT_PARTITION"
-        host = "build_VM_61"
-        target="UEP_UTL_14_132"
-        ip="172.16.14.132"
 		timeout= "9600"
-        iterations= "1"
         bank="recovery.0"
         >
         <!-- Select recovery partition and reboot -->
-        <action>select_partition</action>	
+        <action  >select_partition</action>	
         <!--Wait for reboot complite -->
-        <action>alive_wait</action>
+        <action >alive_wait</action>
         
      </session>    
 
@@ -101,13 +102,10 @@
      <!-- Linux SW update test in general case  -->
      <session
         name="LINUX_SW_UPDATE_TST"
-        host = "build_VM_61"
 		timeout= "9600"
-		ip="172.16.14.132"
-        iterations= "3"
         >
-        <action target="UEP_UTL_14_132">alive_wait</action>
-        <action target="UEP_UTL_14_132">rauc_swupdate_test_action</action>	
+        <action >alive_wait</action>
+        <action >rauc_swupdate_test_action</action>	
      </session>    
 
      <!-- Linux SW update test in general case  -->
@@ -153,7 +151,6 @@
      <session
         name="LINUX_SW_UPDATE_FULL_TST"
         host = "build_VM_61"
-        target="UEP_UTL_14_132"
 		timeout= "9900"
 		iterations= "1"
         >
@@ -163,7 +160,7 @@
      
      <session
         name="LINUX_SW_UPDATE_FULL_TST_UEP2025_131"
-        ip="172.16.14.131">
+        >
         <session>LINUX_SW_UPDATE_FULL_TST</session>
      </session> 
       
@@ -171,10 +168,7 @@
      <!-- Linux SW update switch partitions test  -->
      <session
         name="SWITCH_PARTITIONS_TST"
-        host = "build_VM_61"
-        target="UEP_UTL_14_132"
 		timeout= "9900"
-		iterations= "1"
         >
         <session bank= "recovery.0">SELECT_PARTITION</session>
         <action>alive_wait</action>	
@@ -187,10 +181,7 @@
      <!-- Linux SW update full test  -->
      <session
         name="LINUX_SW_PWR_OFF_UP"
-        host = "build_VM_61"
-        target="UEP_UTL_14_132"
 		timeout= "9900"
-		iterations= "1"
         >
         <action>power_down_up</action>
      </session> 	
@@ -200,9 +191,7 @@
      <session
         name="RANDOM_DELAY_REBOOT"
         host = "build_VM_61"
-        target="UEP_UTL_14_132"
 		timeout= "9600"
-        iterations= "1"
         >
         <action>random_delay</action>
         <action>immideate_reboot</action>

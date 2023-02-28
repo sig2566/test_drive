@@ -19,8 +19,8 @@
   </target>
 
   <target
-    name="UEP_UEP2025_14_131"
-	ip="172.16.14.131"
+    name="UEP_BOARD"
+	ip="TARGET_IP"
     uid="root"
     passw="root"
     info="UEP2025 test board"
@@ -157,12 +157,11 @@
     <action
 		name= "alive_wait"
 		func= "ping_alive_test"
-		target="UEP_UTL_14_132"
+		target="UEP_BOARD"
 		>
 	</action>
  
      <action
-        target="UEP_UTL_14_132"
 		name= "random_delay"
 		func= "random_delay"
 		start_time= "20"

@@ -181,6 +181,10 @@ class ExecTarget:
             err_check   = True 
         if 'pass' in xml_cmd.keys():
             pass_pattern= xml_cmd.get('pass')
+            #check for pass pattern replacement.
+            if pass_pattern in self.main_handler.__dict__.keys():
+                print_log("Replace pass pattern from "+ pass_pattern + " to " + self.main_handler.__dict__[pass_pattern])
+                pass_pattern = self.main_handler.__dict__[pass_pattern]
             
         
         if 'final' in xml_cmd.keys():
@@ -904,7 +908,7 @@ class XML_handler:
         for attrib in cover_session.keys():
             session_attr[attrib]= cover_session.get(attrib)
             
-        print_log('Execute session ' + session.tag)
+        print_log('Execute session ' + session.get('name'))
         print_log('Attrib_dict: '+ str(attrib_dict.keys()))
         print_log('Session_dic: '+ str(session_attr.keys()))
          
