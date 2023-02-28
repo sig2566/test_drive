@@ -46,7 +46,11 @@
   val ="ISS_TFTP"
   new_val="tftp://172.16.15.61/"
   />
-   
+  <attrib
+  id="target"
+  val ="UEP_TELNET_ISS"
+  new_val="UEP_BOARD_SSH_OLD"
+  /> 
  </setup>
 
 <setup

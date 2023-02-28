@@ -21,6 +21,20 @@
     </epilog> 
   </target>
   
+
+  <target
+    name="UEP_BOARD_SSH_OLD"
+	ip="TARGET_IP"
+    uid="root"
+    passw="admin123"
+    info="UEP2025 test board"
+    disabled_algorithms="3des-cbc"
+    >
+    <prolog>
+    </prolog>
+    <epilog>
+    </epilog>
+  </target>
   
   
   <target
@@ -48,10 +62,10 @@
   	<action
 		name= "iss_version_test"
 		func= "exec_cmdlist"
-		PASS_CHECK="Hardware Details.*Software Details"
+		PASS_CHECK="Software Details"
 		target="UEP_TELNET_ISS"
 		>
-		<cmd final= "enos|ISS" pass= "PASS_CHECK"> 'show system information'</cmd>
+		<cmd final= "enos#|ISS#" pass= "PASS_CHECK"> 'show system information'</cmd>
 	</action> 
 
   	<action
@@ -107,9 +121,7 @@
      <!-- Check system information print  -->
      <session
         name="ISS_VERSION_TST"
-        host = "build_VM_61"
 		timeout= "9600"
-        iterations= "1"
          >
         <action>iss_version_test</action>	
         
@@ -155,8 +167,8 @@
 	        start_time="100"
 	        end_time="120"         
 	        >RANDOM_DELAY_REBOOT</thread_session>
-        <session target="UEP_UTL_14_132_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
-        <session target="UEP_UTL_14_132_ISS"  >ISS_VERSION_TST</session>	
+        <session >ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
+        <session >ISS_VERSION_TST</session>	
      </session>
    
           <!-- ISS SW update & race condition with reboot test  -->
@@ -177,8 +189,8 @@
 	        end_time="120" port ="2222"        
 	        >RANDOM_DELAY_REBOOT</thread_session>
 	       
-        <session target="UEP_TELNET_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
-        <session target="UEP_TELNET_ISS"  >ISS_VERSION_TST</session>	
+        <session >ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025</session>	
+        <session >ISS_VERSION_TST</session>	
      </session>
   
    	<!-- ISS immideate upgrade from tftp server in development mode-->
@@ -186,7 +198,7 @@
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_DEV" 
 		 >
 		 
-		 <action target= "UEP_SERIAL">devel_mode_set</action>
+		 <action >devel_mode_set</action>
 		 <action>alive_wait</action>	
         <session target= "UEP_BOARD">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
@@ -204,6 +216,7 @@
       name="SET_WORK_MODE"
       >
 		 <action>work_mode_set</action>
+		 <action>minicom_release</action>
  	     <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
       </session>
        
@@ -211,7 +224,7 @@
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_WORK"
 		 >
         <session>SET_WORK_MODE</session>
-        <session target="UEP_TELNET_ISS" iteractions="10" >ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+        <session iteractions="10" >ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
     
     <!-- Rpll back test -->
@@ -226,14 +239,17 @@
     <!-- ISS compined test -->
     <session name="ISS_COMBINED_UPDATE_TEST"
      iterations="1"
-     >
-     <session bank="recovery.0">SELECT_PARTITION</session>
-     <session >SET_WORK_MODE</session>
+     > 
     
+     <session bank="recovery.0">SELECT_PARTITION</session>
+     <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
+     <session >SET_WORK_MODE</session>
+   
      <session  PASS_CHECK= "Current*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
      <session  PASS_CHECK= "Current*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
      <session  PASS_CHECK= "Current*rootfs.1">SYSTEM_ROLLBACK</session>
      <session  PASS_CHECK= "Current*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session> 
+    
      <session  iterations="5">LINUX_SW_UPDATE_ISS_RACE_TST_WORK</session>
      </session> 
         		

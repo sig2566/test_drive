@@ -167,9 +167,6 @@ class ExecTarget:
    
     def XMLcmd2cmd(self, xml_cmd):
         obj= self.main_handler
-        if 'record_name' in xml_cmd.keys():
-            obj.test_descr= eval(xml_cmd.text)
-            return
         action_delay= 1 #Default wait for action 1 sec
         cmd_str= eval(xml_cmd.text)
         print_log("cmd_str="+cmd_str)
@@ -205,7 +202,7 @@ class ExecTarget:
         immideately_exit = False
         print_log(cmd)
         if self.timeout_err == True:
-            return
+            return False
         cmd = cmd.strip('\n')
           
         action_delay_num = action_delay* 10
@@ -214,7 +211,7 @@ class ExecTarget:
         #     print("NOT READY " + str(self.channel.recv_ready()) + "\n \n")
         #     time.sleep(1)
         if self.channel.closed:
-            return
+            return False
             
         self.channel.send(cmd)
         self.channel.send("\n")
@@ -305,7 +302,7 @@ class ExecTarget:
                 if iter > action_delay_num:
                     if timeout_action != None:
                         if timeout_action == "exit":
-                            CurrTestPassed = False
+                            CurrTestPassed = True
                             self.timeout_err = True                        
                             break
                         else:
@@ -333,7 +330,7 @@ class ExecTarget:
         except UnicodeDecodeError as exc:
             print_log("Exit due to input data exception")
             shout.append('Passed')
-            return shout
+            return True
             
 
         # first and last lines of shout/sherr contain a prompt
@@ -361,11 +358,7 @@ class ExecTarget:
             if check_result(shout, pass_pattern)== False:
                 CurrTestPassed= False
                 
-        if CurrTestPassed == True:
-            shout.append('Passed')
-        else:
-            shout.append('Failed')
-        return shout 
+        return CurrTestPassed 
         
         
     def open_connect(self, main_handler):
@@ -377,7 +370,7 @@ class ExecTarget:
         self.timeout_err = False
         try:
             self.ssh_client.connect(obj.ip, port=obj.port, username=obj.uid, password=obj.passw, 
-                                    timeout= float(main_handler.timeout), disabled_algorithms = obj.disabled_algorithms)
+                                    timeout= float(main_handler.timeout))#, disabled_algorithms = obj.disabled_algorithms)
             print_log( "Connected successfully. ip =" + obj.ip + " user =" + obj.uid+" Password = " + obj.passw)
             ip_addr = obj.ip;
             user_id = obj.uid;
@@ -606,13 +599,14 @@ class MainHandler:
             
         
     def  exec_cmdlist(self):
+        res = True
         print_log("Run commands by list")        
         self.CommonSetup()
         for cmd in self.cmd_list:
-            res= self.exec_target.XMLcmd2cmd(cmd)
+            res= res and self.exec_target.XMLcmd2cmd(cmd)
 
         self.exec_target.close_connection()
-        return True   
+        return res   
         
 
 #Thread wrapper
@@ -802,16 +796,14 @@ class XML_handler:
         
         key= attrib
         keyval= attrib+'.'+attrib_dict[attrib]
-        for tst_attr in setup.keys():
-            #Check if the attribute value should be replaced
-            if tst_attr == keyval:
-                print_log('Attr '+attrib+' replace value '+ attrib_dict[attrib] + ' with val '+setup[tst_attr])
-                attrib_dict[attrib]= setup[tst_attr]
-            else:
-                if tst_attr == key:
-                    print_log('Attr '+attrib+' replace value '+ attrib_dict[attrib] + ' with val '+setup[tst_attr])
-                    attrib_dict[attrib]= setup[tst_attr]
-        
+        if keyval in setup.keys():
+            print_log('Attr '+attrib+' replace value '+ attrib_dict[attrib] + ' with val '+setup[keyval])
+            attrib_dict[attrib]= setup[keyval]
+        else:
+            if key in setup.keys():
+                print_log('Attr '+attrib+' replace value '+ attrib_dict[attrib] + ' with val '+setup[key])
+                attrib_dict[attrib]= setup[key]
+                    
            
     def  ActionProcess(self,cover_action, main_handler_orig, child_attrib_dict_tmp):
         global test_report_action
@@ -846,6 +838,7 @@ class XML_handler:
         # Update target attributes
         
         if "target" in final_attrib_dict.keys():
+            self.AttributeUpdate_with_setup("target", final_attrib_dict)
             target_name= final_attrib_dict['target']
             exec_target=self.test_handler.targets_dict[target_name]
             main_handler.exec_target= exec_target
@@ -882,16 +875,16 @@ class XML_handler:
         if CurrTestPassed == True:
             test_res= "Passed"
 
-        print_log(action.text +': ' + test_res)
-     #   if hasattr(main_handler, "test_descr"):
-     #       result_file.write(main_handler.test_descr+ ': ' + test_res + '\n')
-     #       result_file.flush()
+        print_log(cover_action.text +': ' + test_res)
+        result_file.write('Action \t'+ cover_action.text+ ': ' + test_res + '\n')
+        result_file.flush()
         return CurrTestPassed
         
         
                                     
     def     SessionProcess(self, cover_session, main_handler_orig, attrib_dict= {}, new_thread= False):    
-        TestPassed = True                
+        TestPassed = True 
+        TestResdStr= "Passed"               
         main_handler=  copy.deepcopy(main_handler_orig )
         threads= []
         session_attr= {}
@@ -961,14 +954,14 @@ class XML_handler:
                 TotalTestRes = TotalTestRes and TestPassed
             threads= []
             print_log('Session ' + cover_session.text + ' Finish iteration ' + str(iter_num) + ' from ' +  str(iterations) + ' iterations')
-        print_log('Finish executing session ' + cover_session.text )
-                    
-        if TotalTestRes== True:
-            print_log('Automation test passed')
-            return True
-        else:
-            print_log('Automation test failed')
-            return False
+        if TotalTestRes != True:
+            TestResdStr = "Failed"
+        
+        print_log('Finish executing session ' + cover_session.text + ': '+ TestResdStr)
+        result_file.write('Session \t'+ cover_session.text+ ': ' + TestResdStr + '\n')
+        result_file.flush()
+        
+        return     TotalTestRes        
     
     def DataParserList(self, files_list):
         for file in files_list:
@@ -1012,8 +1005,8 @@ def test_processing(xml_handler):
         attrib['setup']= args.setup
         
     res_file_name= "test_results.txt"
-    result_file= open(res_file_name, 'w')
-    session_cntr =0
+    global result_file
+    result_file = open(res_file_name, 'w')
     xml_handler.SessionProcessList(args.tst, xml_handler.test_handler, attrib) 
     result_file.close()  
     #Email support

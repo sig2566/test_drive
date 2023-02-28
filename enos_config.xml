@@ -17,7 +17,23 @@
     	<cmd>'root'</cmd>
      </prolog>
     <epilog>
-     	<cmd>'echo Connection Finished'</cmd>
+     	<cmd final=".">'echo Connection Finished'</cmd>
+    </epilog>
+  
+  </target>
+
+  <target
+    name="UEP_SERIAL_RELEASE"
+	ip="SERIAL_IP"
+    uid="root"
+    passw="devops123"
+    info="UTL test board"
+    >
+    <prolog>
+    	<cmd>'killall -9 minicom'</cmd>
+     </prolog>
+    <epilog>
+     	<cmd final=".">'echo Connection Finished'</cmd>
     </epilog>
   
   </target>
@@ -42,14 +58,22 @@
 		>
 	</action>
 
+	<action
+		func= "exec_cmdlist"
+		name= "minicom_release"
+		target= "UEP_SERIAL_RELEASE"
+		>
+		<cmd final=".">'echo "minicom was released'</cmd>
+	</action>
+
 
  	<action
 		name= "immideate_reboot"
 		func= "exec_cmdlist"
 		target= "UEP_BOARD"
 		>
-		<cmd> 'sleep ' + str((int(obj.iter_num)+1)*5) </cmd>
-		<cmd final="."> "reboot;exit " </cmd>
+		<cmd>'sleep ' + str((int(obj.iter_num)+1)*5)</cmd>
+		<cmd final=".">"reboot;exit "</cmd>
 	</action>   
 
  	<action
@@ -63,7 +87,7 @@
 		func= "exec_cmdlist"
 		target="UEP_SERIAL"
 		>
-		<cmd> 'rauc status mark-active ' + obj.bank </cmd>
+		<cmd final="."> 'rauc status mark-active ' + obj.bank </cmd>
 		<cmd final="."> 'reboot ; exit' </cmd>
 	</action> 
 	
@@ -93,6 +117,7 @@
         >
         <!-- Select recovery partition and reboot -->
         <action  >select_partition</action>	
+        <action>minicom_release</action>
         <!--Wait for reboot complite -->
         <action >alive_wait</action>
         
@@ -105,7 +130,8 @@
 		timeout= "9600"
         >
         <action >alive_wait</action>
-        <action >rauc_swupdate_test_action</action>	
+        <action >rauc_swupdate_test_action</action>
+        <action>minicom_release</action>	
      </session>    
 
      <!-- Linux SW update test in general case  -->
@@ -130,6 +156,7 @@
        <action>sw_update_upload</action>
         <thread_session>RANDOM_DELAY_REBOOT</thread_session>
         <action>rauc_sw_update_install</action>
+        <action>minicom_release</action>
         <action>alive_wait</action>	
      </session>    
 
@@ -171,10 +198,13 @@
 		timeout= "9900"
         >
         <session bank= "recovery.0">SELECT_PARTITION</session>
+        <action>minicom_release</action>
         <action>alive_wait</action>	
         <session bank= "rootfs.0">SELECT_PARTITION</session>
+        <action>minicom_release</action>
         <action>alive_wait</action>	
         <session bank= "rootfs.1">SELECT_PARTITION</session>
+        <action>minicom_release</action>
         <action>alive_wait</action>		
      </session>    
 
