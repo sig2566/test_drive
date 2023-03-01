@@ -51,8 +51,15 @@
   val ="UEP_TELNET_ISS"
   new_val="UEP_BOARD_SSH_OLD"
   /> 
+
+   <attrib
+  id="target"
+  val ="UEP_BOARD"
+  new_val="UEP_BOARD_SSH_OLD"
+  /> 
  </setup>
 
+ 
 <setup
  name="BOARD_172.16.14.132"
  >

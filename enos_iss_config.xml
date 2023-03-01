@@ -245,10 +245,10 @@
      <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
      <session >SET_WORK_MODE</session>
    
-     <session  PASS_CHECK= "Current*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
-     <session  PASS_CHECK= "Current*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
-     <session  PASS_CHECK= "Current*rootfs.1">SYSTEM_ROLLBACK</session>
-     <session  PASS_CHECK= "Current*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session> 
+     <session  PASS_CHECK= "Current.*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+     <session  PASS_CHECK= "Current.*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+     <session  PASS_CHECK= "Current.*rootfs.1">SYSTEM_ROLLBACK</session>
+     <session  PASS_CHECK= "Current.*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session> 
     
      <session  iterations="5">LINUX_SW_UPDATE_ISS_RACE_TST_WORK</session>
      </session> 

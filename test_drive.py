@@ -224,7 +224,7 @@ class ExecTarget:
         if finish_str != None:
             if finish_str =='.':
                 shout.append('Passed')
-                return shout
+                return True
             else:
                 finish_mark= re.compile(finish_str)
         else:
@@ -232,7 +232,7 @@ class ExecTarget:
             finish_tst_str = start_str+'. finished with exit status'        
             echo_cmd = 'echo {} $?'.format(finish_tst_str)
             if self.channel.closed:
-                return
+                return True
             self.channel.send(echo_cmd)
             self.channel.send("\n")
        
