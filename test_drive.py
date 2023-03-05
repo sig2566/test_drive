@@ -52,7 +52,7 @@ import psutil
 
 #from _ast import Raise
 #Attributes, which are not transfered from up to down
-attribute_exception_list = ["iterations", "timeout", "name"]
+attribute_exception_list = ["iterations", "timeout", "name", "debug"]
 
 # from sphinx.util.pycompat import sys_encoding
 # time.sleep(30)
@@ -77,15 +77,15 @@ def check_result(test_res, success_pattern= '[Tt]ests [Pp]assed'):
     global TestPassed
     CurrTestPassed= False
     str_= '\n'.join(test_res)
-    perror = re.compile('[Ee]rror')
-    m_err= perror.search(str_)
-    if m_err:
-        CurrTestPassed = False
+    p = re.compile(success_pattern)
+    m= p.search(str_)
+    if m:
+        CurrTestPassed= True
     else:
-        p = re.compile(success_pattern)
-        m= p.search(str_)
-        if m:
-            CurrTestPassed= True
+        perror = re.compile('[Ee]rror')
+        m_err= perror.search(str_)
+        if m_err:
+            CurrTestPassed = False
     return CurrTestPassed
 
 def error_chk_flex(test_res, success_pattern= 'FLEX PASSED'):
@@ -174,6 +174,9 @@ class ExecTarget:
         pass_pattern = None
         final_pattern = None
         timeout_action= None
+        if 'debug' in xml_cmd.keys():
+            breakpoint()
+            
         if 'chk' in xml_cmd.keys():
             err_check   = True 
         if 'pass' in xml_cmd.keys():
@@ -186,6 +189,10 @@ class ExecTarget:
         
         if 'final' in xml_cmd.keys():
             final_pattern= xml_cmd.get('final')
+            #check for pass pattern replacement.
+            if final_pattern in self.main_handler.__dict__.keys():
+                print_log("Replace final pattern from "+ final_pattern + " to " + self.main_handler.__dict__[pass_pattern])
+                final_pattern = self.main_handler.__dict__[pass_pattern]
             
         if 'timeout_action' in xml_cmd.keys():
             timeout_action=xml_cmd.get('timeout_action')
@@ -249,6 +256,7 @@ class ExecTarget:
         cmd_fnished= False
         last_line= ""
         iter= 0
+        shout = []
         try:
             while not  self.channel.closed:
                 iter= iter+1
@@ -264,13 +272,8 @@ class ExecTarget:
                     last_line= lines[num_lines-1]
                     for i in range(num_lines):
                         line= lines[i]                        
-                        if p_cmd.search(line):
-                            #Not treat the line with the command
-                            #print_log(line)
-                            # up for now filled with shell junk from stdin
-                            #print("p_cmd.search(line)")
-                            shout = []                     
-                        elif immideately_exit:
+                        #if p_cmd.search(line):
+                        if immideately_exit:
                             cmd_fnished= True
                             break
                         elif (finish_tst_str!= None) and line.startswith(finish_tst_str):
@@ -379,7 +382,12 @@ class ExecTarget:
         #except paramiko.AuthenticationException, error:
         except:
             print_log ("Exeption of ssh connection setup: "+ " UID=" + obj.uid + " PSSW:" + obj.passw + " IP:"+obj.ip+ ' port:'+obj.port)
-            raise
+            self.ssh_client.connect(obj.ip, port=obj.port, username=obj.uid, password=obj.passw, 
+                                    timeout= float(main_handler.timeout))#, disabled_algorithms = obj.disabled_algorithms)
+            print_log( "Connected successfully. ip =" + obj.ip + " user =" + obj.uid+" Password = " + obj.passw)
+            ip_addr = obj.ip;
+            user_id = obj.uid;
+            
         # except socket.error, error:
         #     print_log(error)
         #    raise
@@ -813,6 +821,9 @@ class XML_handler:
             print_log("The action element is not in actions_dict")
             raise 
         
+        if 'debug' in cover_action.keys():
+            breakpoint()
+
         action= copy.deepcopy(self.actions_dict[cover_action.text])
         main_handler=  copy.deepcopy(main_handler_orig )
         test_report_action = cover_action.text
@@ -892,7 +903,8 @@ class XML_handler:
         if cover_session.text not in self.session_dict.keys():
             print_log('Unallocated session name ' + cover_session.text)
             raise
-        
+        if 'debug' in cover_session.keys():
+            breakpoint()
         session= copy.deepcopy(self.session_dict.get(cover_session.text))
         #Combine attributes of the session with attributes of the cover session
         for attrib in session.keys():

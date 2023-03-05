@@ -113,6 +113,62 @@
  	<cmd final=".">'firmware remove sdsdsd'</cmd>
  	<cmd final=".">'reload'</cmd>
  	</action>
+ 	
+ 	<action name= "define_inband_interface"
+ 			func= "exec_cmdlist"
+ 			target="UEP_TELNET_ISS"
+ 			INBOND_IP= "40.0.0.1"
+ 			INBOND_MASK= "255.0.0.0"
+ 			>
+			<cmd final=".">'c t'</cmd>
+			<cmd final=".">'interface ex 0/1'</cmd>
+			<cmd final=".">'shutdown'</cmd>
+			<cmd final=".">'no switchport'</cmd>
+			<cmd final=".">'ip address ' + obj.INBOND_IP + ' ' +obj.INBOND_MASK</cmd>
+			<cmd final=".">'no shutdown'</cmd>
+			<cmd final=".">'end'</cmd>
+			<cmd debug="" pass="Ex0/1 up" timeout_action="exit">'show interface'</cmd> 			
+ 	</action>
+ 	
+  	<action name= "factory_reset"
+  			func= "exec_cmdlist"
+ 			target="UEP_TELNET_ISS"
+ 			FINAL_STR_RESTART="ISS failed first time. Restart ISS"
+ 	>
+ 		<cmd final="want to perform"
+ 			timeout_action="exit"
+ 		     >'factory reset'</cmd>
+ 		<cmd final="Factory reset done">'Y'</cmd>
+ 	</action> 		
+ 
+  	<action name= "iss_save_config"
+  			func= "exec_cmdlist"
+ 			target="UEP_TELNET_ISS"
+ 			FINAL_STR_RESTART="ISS failed first time. Restart ISS"
+ 	>
+ 		<cmd final="OK">'write startup-config'</cmd>
+ 	</action> 		
+ 
+
+ 	
+ 	<action name= "recovery_iss"
+ 			func= "exec_cmdlist"
+ 			target="UEP_SERIAL"
+ 			FINAL_STR_RESTART="ISS failed first time. Restart ISS"
+ 	>
+ 		<cmd final=".">'cd /opt/uep/apps'</cmd>
+ 		<cmd final=".">'cp iss.conf iss_bkp.conf'</cmd>
+ 		<cmd pass="FINAL_STR_RESTART"
+ 		     final= "rauc status: marked slot">'killall -9 ISS.exe'</cmd>
+ 		<cmd pass="ISS failed first time. Restart ISS"
+ 		     final= "EVENT CheckIf-core 0">'killall -9 ISS.exe'</cmd> 	
+ 		<cmd debug="" pass="Restore the backup configuration. Relaunch ISS"
+ 		     final= "EVENT CheckIf-core 0">'killall -9 ISS.exe'</cmd> 	 		
+ 		<cmd pass="Factory setting restore, ISS relaunch."
+ 		     final= "EVENT CheckIf-core 0">'killall -9 ISS.exe'</cmd> 	 		
+ 		<cmd pass="Cold restart (Linux reload) is needed"
+ 		     final= "UEP-2025 login:">'killall -9 ISS.exe'</cmd> 
+ 	</action>
 
 </actions_list>
 
@@ -253,6 +309,33 @@
      <session  iterations="5">LINUX_SW_UPDATE_ISS_RACE_TST_WORK</session>
      </session> 
         		
- 
+   <!-- The system recovery test -->
+   <session name= "SYSTEM_RECOVERY_TEST"
+   	
+   	>
+   	<!--
+     <session bank="recovery.0">SELECT_PARTITION</session>
+     <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
+     <session  PASS_CHECK= "Current.*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+     <session  PASS_CHECK= "Current.*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+     <session>WAIT_AFTER_REBOOT_WORK_MODE</session>   
+     -->
+     <action>factory_reset</action> 
+     <action>define_inband_interface</action> 
+     <action debug="">iss_save_config</action>	
+   	 <action>recovery_iss</action>
+   	 <action>minicom_release</action>
+   	 <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
+   	 <session PASS_CHECK= "Current.*rootfs.0">ISS_VERSION_TST</session>
+     <action>factory_reset</action> 
+     <action>define_inband_interface</action> 
+     <action>iss_save_config</action>	
+   	 <action FINAL_STR_RESTART="EVENT CheckIf">recovery_iss</action>
+   	 <action>minicom_release</action>
+   	 <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
+   	 <session PASS_CHECK= "Current.*rootfs.1">ISS_VERSION_TST</session>
+   	 
+   	</session>
+   			
 </sessions_list>
 </root>
