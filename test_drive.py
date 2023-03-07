@@ -207,7 +207,7 @@ class ExecTarget:
         finish_tst_str = None
         CurrTestPassed = True
         immideately_exit = False
-        print_log(cmd)
+        #print_log(cmd)
         if self.timeout_err == True:
             return False
         cmd = cmd.strip('\n')
@@ -219,7 +219,10 @@ class ExecTarget:
         #     time.sleep(1)
         if self.channel.closed:
             return False
-            
+        time.sleep(1)
+        while self.channel.recv_ready():
+            line_dat = self.channel.recv(5000)
+        
         self.channel.send(cmd)
         self.channel.send("\n")
         shout = []
@@ -271,7 +274,8 @@ class ExecTarget:
                     lines[0] = last_line+lines[0]
                     last_line= lines[num_lines-1]
                     for i in range(num_lines):
-                        line= lines[i]                        
+                        line= lines[i]                
+                        line= line.encode('ascii', errors='ignore').decode()        
                         #if p_cmd.search(line):
                         if immideately_exit:
                             cmd_fnished= True
@@ -305,8 +309,7 @@ class ExecTarget:
                 if iter > action_delay_num:
                     if timeout_action != None:
                         if timeout_action == "exit":
-                            CurrTestPassed = True
-                            self.timeout_err = True                        
+                            CurrTestPassed = True                       
                             break
                         else:
                             if timeout_action == "exception":
@@ -608,10 +611,15 @@ class MainHandler:
         
     def  exec_cmdlist(self):
         res = True
+        obj= self
         print_log("Run commands by list")        
         self.CommonSetup()
         for cmd in self.cmd_list:
-            res= res and self.exec_target.XMLcmd2cmd(cmd)
+            cmd_str= eval(cmd.text)
+            print_log("*************cmd_str="+cmd_str)
+            tmp_res= self.exec_target.XMLcmd2cmd(cmd)            
+            print_log("*************cmd_str="+cmd_str+ ' '+str(tmp_res))
+            res= res and tmp_res
 
         self.exec_target.close_connection()
         return res   

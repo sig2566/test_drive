@@ -127,7 +127,7 @@
 			<cmd final=".">'ip address ' + obj.INBOND_IP + ' ' +obj.INBOND_MASK</cmd>
 			<cmd final=".">'no shutdown'</cmd>
 			<cmd final=".">'end'</cmd>
-			<cmd debug="" pass="Ex0/1 up" timeout_action="exit">'show interface'</cmd> 			
+			<cmd pass="Ex0/1 up" timeout_action="exit">'show interface'</cmd> 			
  	</action>
  	
   	<action name= "factory_reset"
@@ -154,20 +154,26 @@
  	<action name= "recovery_iss"
  			func= "exec_cmdlist"
  			target="UEP_SERIAL"
+ 			timeout= "19600"
  			FINAL_STR_RESTART="ISS failed first time. Restart ISS"
  	>
  		<cmd final=".">'cd /opt/uep/apps'</cmd>
  		<cmd final=".">'cp iss.conf iss_bkp.conf'</cmd>
- 		<cmd pass="FINAL_STR_RESTART"
+ 		<cmd  pass="FINAL_STR_RESTART"
  		     final= "rauc status: marked slot">'killall -9 ISS.exe'</cmd>
- 		<cmd pass="ISS failed first time. Restart ISS"
- 		     final= "EVENT CheckIf-core 0">'killall -9 ISS.exe'</cmd> 	
- 		<cmd debug="" pass="Restore the backup configuration. Relaunch ISS"
- 		     final= "EVENT CheckIf-core 0">'killall -9 ISS.exe'</cmd> 	 		
- 		<cmd pass="Factory setting restore, ISS relaunch."
- 		     final= "EVENT CheckIf-core 0">'killall -9 ISS.exe'</cmd> 	 		
- 		<cmd pass="Cold restart (Linux reload) is needed"
- 		     final= "UEP-2025 login:">'killall -9 ISS.exe'</cmd> 
+ 		<cmd  pass="ISS failed first time. Restart ISS"
+ 			final="EVENT"
+ 		     timeout_action= "exit"
+ 		     action_delay= "20"
+ 		     >'killall -9 ISS.exe'</cmd> 	
+ 		<cmd  pass="Restore the backup configuration. Relaunch ISS"
+ 			final="EVENT"
+ 		     timeout_action= "exit"
+ 		     action_delay= "20"
+ 		     >'killall -9 ISS.exe'</cmd> 	 				
+ 		<cmd  pass="Cold restart (Linux reload) is needed"
+ 		     timeout_action= "exit"
+ 		     action_delay= "120">'killall -9 ISS.exe'</cmd> 
  	</action>
 
 </actions_list>
@@ -194,8 +200,8 @@
         <action >iss_tftp_upgrade_immediate_activate_test</action>
         <action>alive_wait</action>	
         <action
-          start_time= "180"
-		  end_time="190"        
+          start_time= "200"
+		  end_time="210"        
         >random_delay</action>
         <session>ISS_VERSION_TST</session>
      </session>    
@@ -313,26 +319,29 @@
    <session name= "SYSTEM_RECOVERY_TEST"
    	
    	>
-   	<!--
+   	
      <session bank="recovery.0">SELECT_PARTITION</session>
      <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
      <session  PASS_CHECK= "Current.*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
      <session  PASS_CHECK= "Current.*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
-     <session>WAIT_AFTER_REBOOT_WORK_MODE</session>   
-     -->
+     <session>WAIT_AFTER_REBOOT_WORK_MODE</session>  
+    
+    
      <action>factory_reset</action> 
      <action>define_inband_interface</action> 
-     <action debug="">iss_save_config</action>	
-   	 <action>recovery_iss</action>
+     <action >iss_save_config</action>	
+   	 <action >recovery_iss</action>
    	 <action>minicom_release</action>
-   	 <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
+   	 <session debug="" >WAIT_AFTER_REBOOT_WORK_MODE</session>
+   	 <session >WAIT_AFTER_REBOOT_WORK_MODE</session>
    	 <session PASS_CHECK= "Current.*rootfs.0">ISS_VERSION_TST</session>
      <action>factory_reset</action> 
      <action>define_inband_interface</action> 
      <action>iss_save_config</action>	
-   	 <action FINAL_STR_RESTART="EVENT CheckIf">recovery_iss</action>
+   	 <action FINAL_STR_RESTART="EVENT">recovery_iss</action>
    	 <action>minicom_release</action>
    	 <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
+   	 <session >WAIT_AFTER_REBOOT_WORK_MODE</session>
    	 <session PASS_CHECK= "Current.*rootfs.1">ISS_VERSION_TST</session>
    	 
    	</session>
