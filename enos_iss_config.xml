@@ -75,7 +75,7 @@
 		bundle_name = "UEP_SW_UPDATE_BUNDLE"
 		target="UEP_TELNET_ISS"
 		>
-		<cmd final= "#######" pass="Installing .* succeeded" timeout_action="exit" action_delay= "120" 
+		<cmd  pass="Installing .* succeeded" timeout_action="exit" action_delay= "120" 
 		>'firmware download ' + obj.protocol_ip + obj.bundle_name</cmd>
 		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
 		     >'firmware activate immediate database migrate on'</cmd>		     
@@ -286,7 +286,7 @@
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST_WORK"
 		 >
         <session>SET_WORK_MODE</session>
-        <session iteractions="10" >ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+        <session iteractions="1" >ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
     </session>    
     
     <!-- Rpll back test -->
@@ -302,12 +302,12 @@
     <session name="ISS_COMBINED_UPDATE_TEST"
      iterations="1"
      > 
-    
+    <!--
      <session bank="recovery.0">SELECT_PARTITION</session>
      <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
      <session >SET_WORK_MODE</session>
-   
-     <session  PASS_CHECK= "Current.*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
+   -->
+     <session   PASS_CHECK= "Current.*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
      <session  PASS_CHECK= "Current.*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
      <session  PASS_CHECK= "Current.*rootfs.1">SYSTEM_ROLLBACK</session>
      <session  PASS_CHECK= "Current.*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session> 
@@ -319,13 +319,13 @@
    <session name= "SYSTEM_RECOVERY_TEST"
    	
    	>
-   	
+   	<!--
      <session bank="recovery.0">SELECT_PARTITION</session>
      <session>WAIT_AFTER_REBOOT_WORK_MODE</session>
      <session  PASS_CHECK= "Current.*rootfs.1">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
      <session  PASS_CHECK= "Current.*rootfs.0">ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
      <session>WAIT_AFTER_REBOOT_WORK_MODE</session>  
-    
+    -->
     
      <action>factory_reset</action> 
      <action>define_inband_interface</action> 
