@@ -1,9 +1,10 @@
 # test_drive
-Automation environment for SW build and verification
-This directory contains scripts, using for PHY automatic formal build, release and verification.
+Automation environment for SW build and verification.
+This directory contains scripts, using for software automatic formal build, release and verification. 
+The framework is suitable for development for verification of the embedded systems.
 
 ## Script for the release build and validation
-###  Requirements
+###  Main features
 * Support automation for prepare the internal and external release components. It includes build and packaging and copy operation.
 * Support automatic running unit tests for the release validation. The tests can be running on different platforms: VM, ARM boards, native Linux
 * Flexibility. It is possible to reuse the same test for different devices
