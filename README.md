@@ -130,7 +130,7 @@ The action elements describe some automation operation like run/ build/test. Eve
 			>'Y'</cmd>
 	</action>
 Example:
-<cmd final= "#######" pass="Installing .* succeeded" timeout_action="exit" a=  ction_delay= "120" 	>'firmware download ' + obj.protocol_ip + ‘ ’ + obj.bundle_name</cmd>
+<cmd final= "#######" pass="Installing .* succeeded" timeout_action="exit" action_delay= "120" 	>'firmware download ' + obj.protocol_ip + ‘ ’ + obj.bundle_name</cmd>
 
  The <cmd> XML element defines the Linux command, executed on target. The <cmd> element has the following special features:
 1. The <cmd> Linux command can be treated as python string commands. It can use the action and sessions attributes the command.
