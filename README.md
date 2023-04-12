@@ -57,7 +57,7 @@ Example:
 #####  Targets
 Target is an XML element, containing information how to access to the remote target to run build or test.
 Example of target definition:
-    <target
+   ' <target
     name="UEP_UTL_14_132"
        ip="172.16.14.132"
     uid="root"
@@ -70,13 +70,13 @@ Example of target definition:
     <epilog>
      	<cmd>'echo Connection Finished'</cmd>
     </epilog>
-</target>
+</target>'
   Where: ‘name’ is the target name, ‘ip, uid, passw’ – parameters for SSH session establishment.
 ‘prolog’ – list of Linux instructions, implemented on the target after connection
 ‘epilog’ – list of Linux instructions, implemented on the target before disconnect ssh session.
 #####  Setups
 The setup is representation of the specific test environment. It includes number different parameters, used together in the setups. For example they may be IPs, uids, passwords, etc. The setup is used to replace general attributes values in the XML elements to specific values per setup. Example:
-<setup
+'<setup
  name="BOARD_172.16.15.186"
  >
 
@@ -92,7 +92,7 @@ The setup is representation of the specific test environment. It includes number
   />
 …………………………………………………………………..  
   <attrib
-  id="bundle_name"
+  id="bundle_name"'
   new_val="swupdate_uep2025.raucb"
   />
    
@@ -101,7 +101,7 @@ The setup is representation of the specific test environment. It includes number
 #####  Actions. 
 The action elements describe some automation operation like run/ build/test. Every action element contains information about build/test action, its attributes and remote targets, which are used to run the action. Actions are divided to two types:
 * Simple action. Simple action is implemented by direct python function. It is necessary to implement complicated debugging/ build actions. Example:
-	    <action
+	'    <action
 		name= "alive_wait"
 		func= "ping_alive_test"
 		>
@@ -113,10 +113,10 @@ The action elements describe some automation operation like run/ build/test. Eve
 		start_time= "20"
 		end_time="40"
    >
-  </action>
+  </action>'
  The ‘func’ is the name of the python function, implementing this action.
 * Complex actions. The list of the Linux commands, which should be executed on the target to run the action, is implemented directly in the action XML element:
-  	<action
+  	'<action
 		name= "iss_tftp_upgrade_immediate_activate_test"
 		func= "exec_cmdlist"
 		protocol_ip="tftp://172.16.15.61/"
@@ -128,9 +128,9 @@ The action elements describe some automation operation like run/ build/test. Eve
 		     > 'firmware activate immediate database migrate on'</cmd>		     
 			<cmd final="The system is going down for reboot NOW!"
 			>'Y'</cmd>
-	</action>
+	</action>'
 Example:
-<cmd final= "#######" pass="Installing .* succeeded" timeout_action="exit" action_delay= "120" 	>'firmware download ' + obj.protocol_ip + ‘ ’ + obj.bundle_name</cmd>
+'<cmd final= "#######" pass="Installing .* succeeded" timeout_action="exit" action_delay= "120" 	>'firmware download ' + obj.protocol_ip + ‘ ’ + obj.bundle_name</cmd>'
 
  The <cmd> XML element defines the Linux command, executed on target. The <cmd> element has the following special features:
 1. The <cmd> Linux command can be treated as python string commands. It can use the action and sessions attributes the command.
@@ -144,7 +144,7 @@ Example:
 #####  Sessions. 
 A session is XML element, which is used to define complicated test/build scenarios. Every session may contain other sessions, actions and attributes. Using these parameters user may specify complicated build and test scenario. The session XML element can contains attributes, actions and other sessions. The inner actions and sessions are executed by their order. All attributes are passed from outer session into internal sessions and actions.
 Example of session:
-    	<!-- ISS immideate upgrade from tftp server -->
+ '   	<!-- ISS immideate upgrade from tftp server -->
       <session
         name="ISS_IMMIDEATE_UPGRADE_TFTP_TST"
         host = "build_VM_61"
@@ -155,16 +155,16 @@ Example of session:
         <action>iss_tftp_upgrade_immediate_activate_test</action>
         <action>alive_wait</action>		
         <session>ISS_VERSION_TST</session>
-     </session>    
+     </session>    '
 
-	 	<!-- ISS immideate upgrade from sftp server -->
+	 '	<!-- ISS immideate upgrade from sftp server -->
       <session
         name="ISS_IMMIDEATE_UPGRADE_SFTP_TST"
         protocol_ip= "sftp://root:devops123@172.16.15.61//mnt/80GB/opt/"
         iterations="100"
          >
         <session>ISS_IMMIDEATE_UPGRADE_TFTP_TST</session>
-     </session>
+     </session>'
 You can see that the session ISS_IMMIDEATE_UPGRADE_SFTP_TST uses the session ISS_IMMIDEATE_UPGRADE_TFTP_TST and the difference is only upload protocol.
 
 
@@ -173,7 +173,7 @@ NOTE: If there are number XML files, then the script combines the data from all 
 
 #####  Support Multi-threading
 It is possible to run number session and actions in parallel. It is necessary to use the elements thread_session and thread_action inside the upper session to run  them in parallel in the separate thread. Example:
-    <session
+  '  <session
         name="LINUX_SW_UPDATE_ISS_RACE_TST"
         host = "build_VM_61"
 		timeout= "9600"
@@ -185,7 +185,7 @@ It is possible to run number session and actions in parallel. It is necessary to
 	        >RANDOM_DELAY_REBOOT</thread_session>
         <thread_session target="UEP_UTL_14_132_ISS">ISS_IMMIDEATE_UPGRADE_TFTP_TST_UEP2025_131</session>	
         <session target="UEP_UTL_14_132_ISS" ip="172.16.14.131" >ISS_VERSION_TST</session>	
-     </session>       	
+     </session>       	'
 ####  Extension and Reusing of test_drive components
 The test_drive verification system is highly extensible. It is possible to re-use existed components to build automation test. 
 #####  Definition the automation test using XML elements.
@@ -224,7 +224,7 @@ Every session and action XML element may contain number of attributes. There are
 * If attribute is defined in the external (upper) session/action elements that it is passed to all internal sessions and actions. It the same attribute is defined in the internal session/action, that its value is changed to with the value of the same attribute, deined in the external session.
 Example:
 In this example the value GENERAL_HOST is replaced with build_VM_61
-      <session
+  '    <session
 		name=”name1”
 		host=”GENERAL_HOST”
        >
@@ -237,45 +237,45 @@ In this example the value GENERAL_HOST is replaced with build_VM_61
         iterations= "1"
         >
        <session >name1</session>
-</session>
+</session>'
 * If attribute is defined into the child element of the session that it is applied to that child element. 
     Example:
 In this example the RANDOM_DELAY_REBOOT session gets start_time="120" and end_time="180" attributes.
 
-<session
+'<session
         name="LINUX_SW_UPDATE_ISS_RACE_TST"
 ………….
         >
         <thread_session target="UEP_UTL_14_132" ip= "172.16.14.131"
 	        start_time="120"
 	        end_time="180"         
-	        >RANDOM_DELAY_REBOOT</thread_session>
+	        >RANDOM_DELAY_REBOOT</thread_session>'
 	
 * If the same attribute is defined in external session and in the inner session/action elements, including into that session, that the value is taken from the upper session. There are exceptions of the assigned order is defined in the method XML_handler. CheckAttrbUpDownOrder. Currently the inner value is taken for the following attributes:
 o iterations – It defines number times the current session should run.
 o timeout – Maximal number seconds, needed for running of some action. 
 * The attributes of the target element are used as the action XML element attributes.
 * During the test run, the attributes and their values are added as parameters of the MainHandler class and they are used for the “action” execution. For example in the case of compound actions it may used in the “cmd” element. Example:
-  	<action
+  	'<action
 		name= "iss_tftp_upgrade_immediate_activate_test"
 		func= "exec_cmdlist"
-		protocol_ip="tftp://172.16.15.61/"
+		protocol_ip="tftp://172.16.15.61/"'
 		bundle_name = "swupdate.raucb"
 		>
 		<cmd final= "ISS#" pass="Installing .* succeeded"
 	> 'firmware download ' + obj.protocol_ip +  obj.bundle_name
-           </cmd>
+         '  </cmd>
 		<cmd final= "Are you sure you want to perform firmware activate procedure?" 
 		     > 'firmware activate immediate database migrate on'</cmd>		     
 			<cmd final="The system is going down for reboot NOW!"
 			>'Y'</cmd>
-	</action>
+	</action>'
 
 #####  Updating attributes using setups
 The setup element is used to define replacement for group of elements. It is useful to define some test setups, which may include number boards, servers, etc. working together. Every setup contains attributes, their new values and optional their previous values. If the action element has its value and name, similar with defined in the set, than the value is replaced with the new value from the setup element
 Example:
 In the example below the ip attribute value is replaced from SERIAL_IP to 172.16.13.128
-<setup
+'<setup
  name="BOARD_172.16.15.186"
  >
 ……………………………………………………..
@@ -301,13 +301,13 @@ In the example below the ip attribute value is replaced from SERIAL_IP to 172.16
      	<cmd final=".">'echo Connection Finished'</cmd>
     </epilog>
   
-  </target>
+  </target>'
 
 #####  CMD element attributes.
 The “cmd” elements may have attributes, using for command execution processing. These attributes are not controlled bythe regular action attributes, but their value may be replaced by value.
 Example:
 In this example the pass attribute of the cmd element gets the “EVENT” value
-	<action name= "recovery_iss"
+'	<action name= "recovery_iss"
  			func= "exec_cmdlist"
  			target="UEP_SERIAL"
  			timeout= "19600"
@@ -326,7 +326,7 @@ In this example the pass attribute of the cmd element gets the “EVENT” value
    	 <action FINAL_STR_RESTART="EVENT">recovery_iss</action>
 …………………………………………………………………..
    	 
-   	</session>
+   	</session>'
 “Common Attributes
 The common attributes are hardcoded. They are used for most common issues. They are presented in the table below:
 
@@ -349,7 +349,7 @@ It is very simple to extend the test_drive python classes with additional functi
 * Import the test_drive file:
 import test_drive
 * Create new file, which inherited from the corresponding main class:
-class ENOS_main_handler(test_drive.MainHandler):
+'class ENOS_main_handler(test_drive.MainHandler):
     def __init__(self, exec_target):
         self.swupdate_file= 'swupdate.raucb'
         super().__init__(exec_target)
@@ -359,7 +359,7 @@ class ENOS_main_handler(test_drive.MainHandler):
         self.exec_target.close_connection()
         return True
 …………………………………..
-
+'
 * Create the start commands, which uses new class and run existed start procedure:
 exec_target= test_drive.ExecTarget()                
 test_handler = ENOS_main_handler(exec_target)
