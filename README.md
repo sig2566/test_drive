@@ -211,7 +211,7 @@ The test_drive verification system is highly extensible. It is possible to re-us
 #####  Definition the automation test using XML elements.
 The relations between using XML elements are presenting on the picture below: 
 
-
+![Main elements of the test _drive tool](https://github.com/sig2566/test_drive/blob/main/test_drive_hierarchy.jpg)
 
 
 
@@ -355,19 +355,19 @@ In this example the pass attribute of the cmd element gets the “EVENT” value
    	 
    	</session>
 ```
-“Common Attributes  
+#####  Common Attributes  
 The common attributes are hardcoded. They are used for most common issues. They are presented in the table below:  
 
-Name  | Description | Default
-target| The name of the target. It is used to selection the corresponding target.| “”
-mode |Compilation mode (release or debug) |release
-exec_path| Path on the target computer, where binaries release files should be located and executed. |“.”
-timeout | Restrict the time of the test running on target (secs) | 300
-rel_dir | Release directory. This parameter is set with command line |/tmp/PHY_RELEASE
-tests_path | Path to reference files on disk p. | " "
-host |Name of the host server. |‘’
-host_path | Path to working directory on host server |‘.’
-host_sitch |Configure the action to switch temporary from target to host server, for example for the test/release deployment (“True”, “False”)| “False”
+|Name  | Description |Default value|
+|------|-------------|-------------|
+|mode |Compilation mode (release or debug) |release|
+|exec_path| Path on the target computer, where binaries release files should be located and executed. |“.”|
+|timeout | Restrict the time of the test running on target (secs) | 300|
+|rel_dir | Release directory. This parameter is set with command line |/tmp/PHY_RELEASE|
+|tests_path | Path to reference files on disk p. | " "|
+|host |Name of the host server. |‘’|
+|host_path | Path to working directory on host server |‘.’|
+|host_switch |Configure the action to switch temporary from target to host server, for example for the test/release deployment (“True”, “False”)| “False”|
 
 #####  Using multiple XML files
 User may use number XML files to keep the tests to use only necessary tests. The test_drive script uses the definitions from all XML files including with –config list.
