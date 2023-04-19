@@ -14,9 +14,10 @@ The framework is suitable for development for verification of the embedded syste
 * Support simple updating the script in the future.
 ###  Command line
 This is python script with the following parameters:
+```
 python3 test_drive.py –tst <list of names of test and build sessions> --config <list of XML configuration files> --rel_dir <release deploy directory> --setup <setup name>
-
-PASS/FAIL indication:
+```
+**PASS/FAIL indication:** 
 The script prints: “Automation test passed” in good case and “Automation test failed” in bad case in the last stdoutput line.
 
 ####  Configure scenario to run
@@ -26,7 +27,7 @@ User may configure what the script does by selection of the corresponding sessio
 User may select the path to put the release build with using –rel_dir flag, following with the path to the release directory.
 
 ####  Selection setup.
-The setup is specific set of parameters, like IPs, passwords, users, which are used by specific tests setup.
+The setup is specific set of parameters, like IPs, passwords, users, which are used by specific hardware tests setup.
 ####  Selection XML configuration files
 User may use number of configuration files to configure the script. The list of xml configuration files is added with the –config flag.
 
@@ -36,20 +37,27 @@ User may use number of configuration files to configure the script. The list of 
 XML configuration files can contain the following main elements:
 #####  Command Elements
 The command element represent the command, which sent to output stream. The command might have optional attributes and the command body. Format of the command element:
+```
 <cmd  --- Command element tag  
- attributes>Body</cmd>  
-Attributes:
+    attributes
+ >
+    Body
+ </cmd> 
+```
+**Attributes:** 
 chk= "True"   ---- Call exception if the command failed with error.  
-final=”.”  -- Immediately finish the command and go to the next command  
-final=”regular expression”  -- The command is finished when the regular expression pattern appeared in the output of the command  
-pass=”pass_regular_expression” – The pass pattern. When the running command output contains the pass patter, the command result is passed.  
+**final**=”.”  -- Immediately finish the command and go to the next command  
+**final**=”regular expression”  -- The command is finished when the regular expression pattern appeared in the output of the command  
+**pass**=”pass_regular_expression” – The pass pattern. When the running command output contains the pass patter, the command result is passed.
+  
 The following two attributes are used to set and handle timeouts after the command execution start:  
-action_delay – Waiting time in seconds before the action is started. Default is 1 second.  
-timeout_action –Activation of some action after the timeout is expired:  
+**action_delay** – Waiting time in seconds before the action is started. Default is 1 second.  
+**timeout_action** –Activation of some action after the timeout is expired:  
 * “new_line” – Print new line periodically every action_delay time..  
 * “exception” – run exception.  
 * “exit” – Finish when the time is expired.  
-NOTE: If the final and timeout_action attributes are not defined, then the echo <tag> command is sent after the command and the command handler waits for the <tag> as indication that the command is finished.  
+NOTE: If the **final** and **timeout_action** attributes are not defined, then the **`echo special_tag`** command is sent after the command and the command handler waits for the **special_tag** as indication that the previous command was finished.  
+   
 #####  Command body
 The command body is the Python stile line. The obj object contains may be user in the line as parameter. Its fields are attributes, defined in upper XML elements.   
 Example:   
@@ -140,7 +148,7 @@ The action elements describe some automation operation like run/ build/test. Eve
   </action>
 ```
 Example:
- The **cmd** XML element defines the Linux command, executed on target. The <cmd> element has the following special features:
+ The **cmd** XML element defines the Linux command, executed on target. The **`<cmd>`** element has the following special features:
 1. The **cmd** Linux command can be treated as python string commands. It can use the action and sessions attributes the command.
 2. It is possible to add checking of the error code. If the commands returns error code then exception is raised (chk attribute). Example chk=”True”
 3. It is possible check result of the operation with checking if some patterns is existed in output data (pass attribute)  pass=”Passed”
@@ -241,7 +249,7 @@ In this example the value GENERAL_HOST is replaced with build_VM_61
 		name=”name1”  
 		host=”GENERAL_HOST”  
        >
-	………………………..  
+	 
       </session>  
 <session  
         name="LINUX_SW_UPDATE_ISS_RACE_TST"  
@@ -258,19 +266,20 @@ In this example the RANDOM_DELAY_REBOOT session gets start_time="120" and end_ti
 ```
 <session
         name="LINUX_SW_UPDATE_ISS_RACE_TST"
-………….
+
         >
         <thread_session target="UEP_UTL_14_132" ip= "172.16.14.131"
 	        start_time="120"
 	        end_time="180"         
 	        >RANDOM_DELAY_REBOOT
-	</thread_session>'
+	</thread_session>
+</session>	
 ```	
 * If the same attribute is defined in external session and in the inner session/action elements, including into that session, that the value is taken from the upper session. There are exceptions of the assigned order is defined in the method XML_handler. CheckAttrbUpDownOrder. Currently the inner value is taken for the following attributes:
 * iterations – It defines number times the current session should run.  
 * timeout – Maximal number seconds, needed for running of some action.  
 * The attributes of the target element are used as the action XML element attributes.
-* During the test run, the attributes and their values are added as parameters of the MainHandler class and they are used for the “action” execution. For example in the case of compound actions it may used in the “cmd” element. Example:  
+* During the test run, the attributes and their values are added as parameters of the MainHandler class and they are used for the **actio** execution. For example in the case of compound actions it may used in the **cmd** element. Example:  
 ```
   <action
 		name= "iss_tftp_upgrade_immediate_activate_test"
@@ -393,22 +402,21 @@ test_drive.test_processing(xml_handler)
 
 
 #####  Build and test commands examples
+```
 Test switch partitions in Linux 
-test_drive.py --config build_config.xml enos_config.xml --tst SWITCH_PARTITIONS_TST  --rel_dir 
+test_drive.py --config build_config.xml enos_config.xml --tst SWITCH_PARTITIONS_TST  --rel_dir  . --setup BOARD_172.16.15.186
 
 Test SW update in Linux 
-test_drive.py  --config build_config.xml enos_config.xml --tst LINUX_SW_UPDATE_FULL_TST  --rel_dir . 
+test_drive.py  --config build_config.xml enos_config.xml --tst LINUX_SW_UPDATE_FULL_TST  --rel_dir .  --setup BOARD_172.16.15.186 
 
 ISS partitions upgrade tests: 
-test_drive.py --config build_config.xml enos_config.xml --tst SWITCH_PARTITIONS_TST  --rel_dir . 
+test_drive.py --config build_config.xml enos_config.xml --tst SWITCH_PARTITIONS_TST  --rel_dir .  --setup BOARD_172.16.15.186 
 
 RAUC fault test: 
-test_drive.py --config build_config.xml enos_config.xml enos_iss_config.xml  --tst LINUX_SW_UPDATE_RACE_TST
+test_drive.py --config build_config.xml enos_config.xml enos_iss_config.xml  --tst LINUX_SW_UPDATE_RACE_TST  --rel_dir . --setup BOARD_172.16.15.186 
+```
 #####  Customization of the build & test environment
-User may change the general tests behavior. For example it can select running tests/build on private VM. In that case user may add new personal config file with additional options. See igor_configure.xml for more information.
-The following parameters may be used for tests modification and reuse
-* Change attributes with existed tests
-* Adding new tests configurations
-* Add new child classes with specific behavior
+User may change the general tests behavior. For example it can select running tests/build on private VM. In that case user may add new personal config file with additional options.
+
 
 
